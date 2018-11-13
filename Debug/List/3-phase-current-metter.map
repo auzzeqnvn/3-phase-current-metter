@@ -1,0 +1,29 @@
+RAM Allocation [bytes]
+Variable                                                                          Address   Size
+------------------------------------------------------------------------------------------------
+CURRENT                                                                           0x0160       4
+
+EEPROM Allocation [bytes]
+Variable                                                                          Address   Size
+------------------------------------------------------------------------------------------------
+
+Register Allocation
+Variable                                                                          Register  Size
+------------------------------------------------------------------------------------------------
+cnt                                                                               R6           1
+data                                                                              R5           1
+data1                                                                             R7,R8        2
+data2                                                                             R9,R10       2
+data3                                                                             R11,R12      2
+
+FLASH Allocation [words]
+Function                                                                          Address   Size
+------------------------------------------------------------------------------------------------
+timer1_ovf_isr                                                                    0x00047    117
+read_adc                                                                          0x000BC     15
+SEND_DATA_LED                                                                     0x000CB     43
+SCAN_LED                                                                          0x000F6    148
+SPI_7753_SEND                                                                     0x0018A     18
+SPI_7753_RECEIVE                                                                  0x0019C     16
+ADE7753_READ                                                                      0x001AC     85
+main                                                                              0x00201     92

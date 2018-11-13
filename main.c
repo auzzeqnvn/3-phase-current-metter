@@ -1,0 +1,562 @@
+/*******************************************************
+This program was created by the
+CodeWizardAVR V3.12 Advanced
+Automatic Program Generator
+� Copyright 1998-2014 Pavel Haiduc, HP InfoTech s.r.l.
+http://www.hpinfotech.com
+
+Project : 3 Phase current metter
+Version : 1.0
+Date    : 11/10/2018
+Author  : 
+Company : 
+Comments: 
+Do va hien thi cuong do dong dien
+Su dung IC ADE7753
+
+
+Chip type               : ATmega8L
+Program type            : Application
+AVR Core Clock frequency: 11.059200 MHz
+Memory model            : Small
+External RAM size       : 0
+Data Stack size         : 256
+*******************************************************/
+
+#include <mega8.h>
+#include <delay.h>
+
+// Declare your global variables here
+#define DO_595_LATCH  PORTB.1
+#define DO_595_MOSI    PORTB.3
+#define DO_595_SCK    PORTB.5
+
+#define CTRL_595_ON     DO_595_LATCH = 1
+#define CTRL_595_OFF    DO_595_LATCH = 0
+
+#define BUZZER  PORTC.2
+
+#define BUZZER_ON   BUZZER = 1
+#define BUZZER_OFF  BUZZER = 0
+
+#define CS_PHASE1_MCU   PORTC.4
+#define CS_PHASE2_MCU   PORTC.5
+#define CS_PHASE3_MCU   PORTC.3
+
+#define PHASE_1_ON  CS_PHASE1_MCU = 1
+#define PHASE_1_OFF CS_PHASE1_MCU = 0
+#define PHASE_2_ON  CS_PHASE2_MCU = 1
+#define PHASE_2_OFF CS_PHASE2_MCU = 0
+#define PHASE_3_ON  CS_PHASE3_MCU = 1
+#define PHASE_3_OFF CS_PHASE3_MCU = 0
+
+#define DOUT_MOSI_SPI_7753_MCU   PORTD.1
+#define DIN_MISO_SPI_7753_MCU    PIND.0
+#define DOUT_CLK_SPI_7753_MCU   PORTD.4
+
+//Dia chi cac thanh ghi SPI_ADE7753
+#define WAVEFORM        0x01,3    
+#define AENERGY         0x02,3
+#define RAENERGY        0x03,3
+#define LAENERGY		0x04,3
+#define VAENERGY		0x05,3
+#define RVAENERGY		0x06,3
+#define LVAENERGY		0x07,3
+#define LVARENERGY		0x08,3
+#define MODE			0x09,2
+#define IRQEN			0x0A,2
+#define STATUS			0x0B,2
+#define RSTSTATUS		0x0C,2
+#define CH1OS			0x0D,1
+#define CH2OS			0x0E,1
+#define GAIN			0x0F,1
+#define PHCAL			0x10,1
+#define APOS			0x11,2
+#define WGAIN			0x12,2
+#define WDIV			0x13,1
+#define CFNUM			0x14,2
+#define CFDEN			0x15,2
+#define IRMS			0x16,3
+#define VRMS			0x17,3
+#define IRMSOS			0x18,2
+#define VRMSOS			0x19,2
+#define VAGAIN			0x1A,2
+#define VADIV			0x1B,1
+#define LINECYC			0x1C,2
+#define ZXTOUT			0x1D,2
+#define SAGCYC			0x1E,1
+#define SAGLVL			0x1F,1
+#define IPKLVL			0x20,1
+#define VPKLVL			0x21,1
+#define IPEAK			0x22,3
+#define RSTIPEAK		0x23,3
+#define VPEAK			0x24,3
+#define RSTVPEAK		0x25,3
+#define TEMP			0x26,1
+#define PERIOD			0x27,2
+#define TMODE			0x3D,1
+#define CHKSUM			0x3E,1
+#define DIEREV			0x3F,1
+
+void    SEND_DATA_LED(unsigned char  data_first,unsigned char  data_second,unsigned char  data_third);
+void    SCAN_LED(unsigned char num_led,unsigned char    data);
+
+unsigned char   cnt=1;
+unsigned char   data = 0;
+unsigned int   data1 = 0;
+unsigned int   data2 = 0;
+unsigned int   data3 = 0;
+
+unsigned long int   CURRENT = 0;
+
+
+// Timer1 overflow interrupt service routine
+interrupt [TIM1_OVF] void timer1_ovf_isr(void)
+{
+// Reinitialize Timer1 value
+    TCNT1H=0xAA00 >> 8;
+    TCNT1L=0xAA00 & 0xff;
+// Place your code here
+    if(cnt > 12) cnt=1;
+    if(cnt == 1)    data = data1/1000;
+    else if(cnt == 2)    data = data1/100%10;
+    else if(cnt == 3)    data = data1/10%10;
+    else if(cnt == 4)    data = data1%10;
+    else if(cnt == 5)    data = data2/1000;
+    else if(cnt == 6)    data = data2/100%10;
+    else if(cnt == 7)    data = data2/10%10;
+    else if(cnt == 8)    data = data2%10;
+    else if(cnt == 9)    data = data3/1000;
+    else if(cnt == 10)    data = data3/100%10;
+    else if(cnt == 11)    data = data3/10%10;
+    else if(cnt == 12)    data = data3%10;
+    SCAN_LED(cnt++,data);
+    data3++;
+}
+
+// Voltage Reference: AVCC pin
+#define ADC_VREF_TYPE ((0<<REFS1) | (1<<REFS0) | (0<<ADLAR))
+
+// Read the AD conversion result
+unsigned int read_adc(unsigned char adc_input)
+{
+    ADMUX=adc_input | ADC_VREF_TYPE;
+    // Delay needed for the stabilization of the ADC input voltage
+    delay_us(10);
+    // Start the AD conversion
+    ADCSRA|=(1<<ADSC);
+    // Wait for the AD conversion to complete
+    while ((ADCSRA & (1<<ADIF))==0);
+    ADCSRA|=(1<<ADIF);
+    return ADCW;
+}
+
+void    SEND_DATA_LED(unsigned char  data_first,unsigned char  data_second,unsigned char  data_third)
+{
+    unsigned char   i;
+    unsigned char   data;
+    data = data_first;
+    for(i=0;i<8;i++)
+    {
+        if((data & 0x80) == 0x80)    DO_595_MOSI = 1;
+        else    DO_595_MOSI = 0;
+        data <<= 1;
+        DO_595_SCK = 0;
+        DO_595_SCK = 1;
+    }
+    data = data_second;
+    for(i=0;i<8;i++)
+    {
+        if((data & 0x80) == 0x80)    DO_595_MOSI = 1;
+        else    DO_595_MOSI = 0;
+        data <<= 1;
+        DO_595_SCK = 0;
+        DO_595_SCK = 1;
+    }
+    data = data_third;
+    for(i=0;i<8;i++)
+    {
+        if((data & 0x80) == 0x80)    DO_595_MOSI = 1;
+        else    DO_595_MOSI = 0;
+        data <<= 1;
+        DO_595_SCK = 0;
+        DO_595_SCK = 1;
+    }
+    CTRL_595_ON;
+    CTRL_595_OFF;
+}
+
+void    SCAN_LED(unsigned char num_led,unsigned char    data)
+{
+    unsigned char   byte1,byte2,byte3;
+    byte1 = 0;
+    byte2 = 0;
+    byte3 = 0;
+    switch(num_led)
+    {
+        case    1:
+        {
+            byte3 = 0x01;
+            byte2 = 0x00;
+            break;
+        }
+        case    2:
+        {
+            byte3 = 0x02;
+            byte2 = 0x00;
+            byte1 = 0x04;
+            break;
+        }
+        case    3:
+        {
+            byte3 = 0x04;
+            byte2 = 0x00;
+            break;
+        }
+        case    4:
+        {
+            byte3 = 0x08;
+            byte2 = 0x00;
+            break;
+        }
+        case    5:
+        {
+            byte3 = 0x40;
+            byte2 = 0x00;
+            break;
+        }
+        case    6:
+        {
+            byte3 = 0x20;
+            byte2 = 0x00;
+            byte1 = 0x04;
+            break;
+        }
+        case    7:
+        {
+            byte3 = 0x10;
+            byte2 = 0x00;
+            break;
+        }
+        case    8:
+        {
+            byte3 = 0x80;
+            byte2 = 0x00;
+            break;
+        }
+        case    9:
+        {
+            byte3 = 0x00;
+            byte2 = 0x40;
+            break;
+        }
+        case    10:
+        {
+            byte3 = 0x00;
+            byte2 = 0x20;
+            byte1 = 0x04;
+            break;
+        }
+        case    11:
+        {
+            byte3 = 0x00;
+            byte2 = 0x10;
+            break;
+        }
+        case    12:
+        {
+            byte3 = 0x00;
+            byte2 = 0x80;
+            break;
+        }
+    }
+    switch(data)
+    {
+        case    0:
+        {
+            byte1 |= 0xF9;
+            break;
+        }
+        case    1:
+        {
+            byte1 |= 0x81;
+            break;
+        }
+        case    2:
+        {
+            byte1 |= 0xBA;
+            break;
+        }
+        case    3:
+        {
+            byte1 |= 0xAB;
+            break;
+        }
+        case    4:
+        {
+            byte1 |= 0xC3;
+            break;
+        }
+        case    5:
+        {
+            byte1 |= 0x6B;
+            break;
+        }
+        case    6:
+        {
+            byte1 |= 0x7B;
+            break;
+        }
+        case    7:
+        {
+            byte1 = 0xA1;
+            break;
+        }
+        case    8:
+        {
+            byte1 |= 0xFB;
+            break;
+        }
+        case    9:
+        {
+            byte1 |= 0xEB;
+            break;
+        }    
+    }
+    SEND_DATA_LED(byte1,byte2,byte3);
+}
+
+void    SPI_7753_SEND(unsigned char data)
+{
+    unsigned char cnt;
+    unsigned char   tmp = data;
+    for(cnt = 0;cnt < 8; cnt++)
+    {
+        if((tmp & 0x80) == 0x80)   DOUT_MOSI_SPI_7753_MCU = 1;
+        DOUT_MOSI_SPI_7753_MCU = 0;
+        tmp <<= 1;
+        // DOUT_CLK_SPI_7753_MCU = 0;
+        DOUT_CLK_SPI_7753_MCU = 1;
+        DOUT_CLK_SPI_7753_MCU = 0;
+    }
+}
+
+unsigned char    SPI_7753_RECEIVE(void)
+{
+    unsigned char cnt;
+    unsigned char data;
+    data = 0;
+    for(cnt = 0;cnt < 8; cnt++)
+    {
+        // DOUT_CLK_SPI_7753_MCU = 0;
+        DOUT_CLK_SPI_7753_MCU = 1;
+        if(DIN_MISO_SPI_7753_MCU == 1)   data += 1;
+        data <<= 1;
+        DOUT_CLK_SPI_7753_MCU = 0;
+        // DOUT_CLK_SPI_7753_MCU = 0;
+        // DOUT_CLK_SPI_7753_MCU = 1;
+    }
+    return data;
+}
+
+void    ADE7753_WRITE(unsigned char IC_CS,unsigned char addr,unsigned char num_data,unsigned char data_1,unsigned char data_2,unsigned char data_3)
+{
+    unsigned char data[4];
+    unsigned char   i;
+    data[0] = data_1;
+    data[1] = data_2;
+    data[2] = data_3;
+
+    switch (IC_CS)
+    {
+        case 1:
+        {
+            PHASE_1_ON;
+            PHASE_2_OFF;
+            PHASE_3_OFF;
+            break;
+        }
+        case 2:
+        {
+            PHASE_1_OFF;
+            PHASE_2_ON;
+            PHASE_3_OFF;
+            break;
+        }
+        case 3:
+        {
+            PHASE_1_OFF;
+            PHASE_2_OFF;
+            PHASE_3_ON;
+            break;
+        }
+    }
+    //addr |= 0x80;
+    SPI_7753_SEND(addr);
+    delay_us(20);
+    for(i=0;i<num_data;i++)    SPI_7753_SEND(data[i]);
+    PHASE_1_OFF;
+    PHASE_2_OFF;
+    PHASE_3_OFF;
+}
+unsigned long int    ADE7753_READ(unsigned char IC_CS,unsigned char addr,unsigned char num_data)
+{
+    unsigned char   i;
+    unsigned char   data[4];
+    unsigned long int res;
+    for(i=0;i<4;i++)    data[i] = 0;
+    switch (IC_CS)
+    {
+        case 1:
+        {
+            PHASE_1_ON;
+            PHASE_2_OFF;
+            PHASE_3_OFF;
+            break;
+        }
+        case 2:
+        {
+            PHASE_1_OFF;
+            PHASE_2_ON;
+            PHASE_3_OFF;
+            break;
+        }
+        case 3:
+        {
+            PHASE_1_OFF;
+            PHASE_2_OFF;
+            PHASE_3_ON;
+            break;
+        }
+    }
+    addr &= 0x3F;
+    SPI_7753_SEND(addr);
+    for(i=0;i<num_data;i++) data[i] = SPI_7753_RECEIVE();
+    PHASE_1_OFF;
+    PHASE_2_OFF;
+    PHASE_3_OFF;
+    res = 0;
+    for(i=0;i<num_data;i++)
+    {
+        res <<= 8;
+        res += data[i];
+    }
+    return (res);
+}
+
+void    ADE7753_INIT(void)
+{
+    ADE7753_WRITE(1,MODE,0x00,0x00,0x00);
+    ADE7753_WRITE(1,SAGLVL,0X2a,0X00,0X00);
+    ADE7753_WRITE(1,SAGCYC,0X04,0X00,0X00);
+}
+
+void main(void)
+{
+// Declare your local variables here
+// Input/Output Ports initialization
+// Port B initialization
+// Function: Bit7=In Bit6=In Bit5=In Bit4=Out Bit3=Out Bit2=In Bit1=Out Bit0=In 
+DDRB=(0<<DDB7) | (0<<DDB6) | (1<<DDB5) | (1<<DDB4) | (1<<DDB3) | (0<<DDB2) | (1<<DDB1) | (0<<DDB0);
+// State: Bit7=T Bit6=T Bit5=T Bit4=0 Bit3=0 Bit2=T Bit1=0 Bit0=T 
+PORTB=(0<<PORTB7) | (0<<PORTB6) | (0<<PORTB5) | (0<<PORTB4) | (0<<PORTB3) | (0<<PORTB2) | (0<<PORTB1) | (0<<PORTB0);
+
+// Port C initialization
+// Function: Bit6=In Bit5=Out Bit4=Out Bit3=Out Bit2=Out Bit1=In Bit0=In 
+DDRC=(0<<DDC6) | (1<<DDC5) | (1<<DDC4) | (1<<DDC3) | (1<<DDC2) | (0<<DDC1) | (0<<DDC0);
+// State: Bit6=T Bit5=T Bit4=T Bit3=T Bit2=T Bit1=T Bit0=T 
+PORTC=(0<<PORTC6) | (0<<PORTC5) | (0<<PORTC4) | (0<<PORTC3) | (0<<PORTC2) | (0<<PORTC1) | (0<<PORTC0);
+
+// Port D initialization
+// Function: Bit7=In Bit6=In Bit5=In Bit4=Out Bit3=In Bit2=In Bit1=In Bit0=Out 
+DDRD=(0<<DDD7) | (0<<DDD6) | (0<<DDD5) | (1<<DDD4) | (0<<DDD3) | (0<<DDD2) | (1<<DDD1) | (0<<DDD0);
+// State: Bit7=T Bit6=T Bit5=T Bit4=T Bit3=T Bit2=T Bit1=T Bit0=T 
+PORTD=(0<<PORTD7) | (0<<PORTD6) | (0<<PORTD5) | (0<<PORTD4) | (0<<PORTD3) | (0<<PORTD2) | (0<<PORTD1) | (0<<PORTD0);
+
+// Timer/Counter 0 initialization
+// Clock source: System Clock
+// Clock value: Timer 0 Stopped
+TCCR0=(0<<CS02) | (0<<CS01) | (0<<CS00);
+TCNT0=0x94;
+
+// Timer/Counter 1 initialization
+// Clock source: System Clock
+// Clock value: 11059.200 kHz
+// Mode: Normal top=0xFFFF
+// OC1A output: Disconnected
+// OC1B output: Disconnected
+// Noise Canceler: Off
+// Input Capture on Falling Edge
+// Timer Period: 2 ms
+// Timer1 Overflow Interrupt: On
+// Input Capture Interrupt: Off
+// Compare A Match Interrupt: Off
+// Compare B Match Interrupt: Off
+TCCR1A=(0<<COM1A1) | (0<<COM1A0) | (0<<COM1B1) | (0<<COM1B0) | (0<<WGM11) | (0<<WGM10);
+TCCR1B=(0<<ICNC1) | (0<<ICES1) | (0<<WGM13) | (0<<WGM12) | (0<<CS12) | (0<<CS11) | (1<<CS10);
+TCNT1H=0xA9;
+TCNT1L=0x9A;
+ICR1H=0x00;
+ICR1L=0x00;
+OCR1AH=0x00;
+OCR1AL=0x00;
+OCR1BH=0x00;
+OCR1BL=0x00;
+
+// Timer/Counter 2 initialization
+// Clock source: System Clock
+// Clock value: Timer2 Stopped
+// Mode: Normal top=0xFF
+// OC2 output: Disconnected
+ASSR=0<<AS2;
+TCCR2=(0<<PWM2) | (0<<COM21) | (0<<COM20) | (0<<CTC2) | (0<<CS22) | (0<<CS21) | (0<<CS20);
+TCNT2=0x00;
+OCR2=0x00;
+
+// Timer(s)/Counter(s) Interrupt(s) initialization
+TIMSK=(0<<OCIE2) | (0<<TOIE2) | (0<<TICIE1) | (0<<OCIE1A) | (0<<OCIE1B) | (1<<TOIE1) | (0<<TOIE0);
+
+// External Interrupt(s) initialization
+// INT0: Off
+// INT1: Off
+MCUCR=(0<<ISC11) | (0<<ISC10) | (0<<ISC01) | (0<<ISC00);
+
+// USART initialization
+// USART disabled
+UCSRB=(0<<RXCIE) | (0<<TXCIE) | (0<<UDRIE) | (0<<RXEN) | (0<<TXEN) | (0<<UCSZ2) | (0<<RXB8) | (0<<TXB8);
+
+// Analog Comparator initialization
+// Analog Comparator: Off
+// The Analog Comparator's positive input is
+// connected to the AIN0 pin
+// The Analog Comparator's negative input is
+// connected to the AIN1 pin
+ACSR=(1<<ACD) | (0<<ACBG) | (0<<ACO) | (0<<ACI) | (0<<ACIE) | (0<<ACIC) | (0<<ACIS1) | (0<<ACIS0);
+
+// ADC initialization
+// ADC Clock frequency: 345.600 kHz
+// ADC Voltage Reference: AREF pin
+ADMUX=ADC_VREF_TYPE;
+ADCSRA=(1<<ADEN) | (0<<ADSC) | (0<<ADFR) | (0<<ADIF) | (0<<ADIE) | (1<<ADPS2) | (0<<ADPS1) | (1<<ADPS0);
+SFIOR=(0<<ACME);
+
+// SPI initialization
+// SPI disabled
+SPCR=(0<<SPIE) | (0<<SPE) | (0<<DORD) | (0<<MSTR) | (0<<CPOL) | (0<<CPHA) | (0<<SPR1) | (0<<SPR0);
+
+// TWI initialization
+// TWI disabled
+TWCR=(0<<TWEA) | (0<<TWSTA) | (0<<TWSTO) | (0<<TWEN) | (0<<TWIE);
+
+// Global enable interrupts
+#asm("sei")
+//ADE7753_INIT();
+//PHASE_1_ON;
+while (1)
+      {
+          CURRENT = ADE7753_READ(1,IRMS);
+          data1 = (unsigned int) (((unsigned long)read_adc(0)*500)/1023);
+          data2 = (unsigned int)CURRENT*100;
+          //data3++;
+      }
+}
