@@ -110,11 +110,11 @@ unsigned int   Uint_dataLed1 = 0;
 unsigned int   Uint_dataLed2 = 0;
 unsigned int   Uint_dataLed3 = 0;
 
-bit Bit_sample_full =0;
+Bit Bit_sample_full =0;
 
-unsigned long Uint_Current1_Array[NUM_SAMPLE];
-unsigned long Uint_Current2_Array[NUM_SAMPLE];
-unsigned long Uint_Current3_Array[NUM_SAMPLE];
+unsigned int Uint_Current1_Array[NUM_SAMPLE];
+unsigned int Uint_Current2_Array[NUM_SAMPLE];
+unsigned int Uint_Current3_Array[NUM_SAMPLE];
 unsigned char   Uc_Current_Array_Cnt = 0;
 
 // Timer1 overflow interrupt service routine
@@ -451,9 +451,10 @@ unsigned long int    ADE7753_READ(unsigned char IC_CS,unsigned char addr,unsigne
         res <<= 8;
         res += data[i];
     }
-    Uint_dataLed2 = data[0];
-
-    return (res/3600);
+    // Uint_dataLed1 = data[0];
+    // Uint_dataLed2 = data[1];
+    // Uint_dataLed3 = data[2];
+    return (res);
 }
 
 void    ADE7753_INIT(void)
@@ -466,14 +467,14 @@ void    ADE7753_INIT(void)
 
 void    READ_AMP(void)
 {
-    unsigned long Uint_Tmp;
-    unsigned long Uint_CurrentTmp_Array[NUM_SAMPLE];
+    unsigned int Uint_Tmp;
+    unsigned int Uint_CurrentTmp_Array[NUM_SAMPLE];
     unsigned char   Uc_loop1_cnt,Uc_loop2_cnt;
     unsigned long   Ul_Sum;
 
-    Uint_Current1_Array[Uc_Current_Array_Cnt] = ADE7753_READ(1,IRMS);;
-    //Uint_Current2_Array[Uc_Current_Array_Cnt] = (unsigned int)ADE7753_READ(2,IRMS)/100;
-    //Uint_Current3_Array[Uc_Current_Array_Cnt] = (unsigned int)ADE7753_READ(3,IRMS)/100;
+    Uint_Current1_Array[Uc_Current_Array_Cnt] = ADE7753_READ(1,IRMS)/100;
+    Uint_Current2_Array[Uc_Current_Array_Cnt] = ADE7753_READ(2,IRMS)/100;
+    Uint_Current3_Array[Uc_Current_Array_Cnt] = ADE7753_READ(3,IRMS)/100;
     Uc_Current_Array_Cnt++;
     if(Uc_Current_Array_Cnt >= NUM_SAMPLE)
     {
@@ -481,42 +482,40 @@ void    READ_AMP(void)
         Uc_Current_Array_Cnt = 0;
     }
 
-    // if(Bit_sample_full == 0)
-    // {
-    //     Uint_dataLed1 = 0;
-    //     //Uint_dataLed2 = 0;
-    //    //Uint_dataLed3 = 0;
-    // }
-    // else
-    // {
-    //     /* Chuyen sang bo nho dem*/
-    //     for(Uc_loop1_cnt = 0; Uc_loop1_cnt<NUM_SAMPLE; Uc_loop1_cnt++)
-    //     {
-    //         Uint_CurrentTmp_Array[Uc_loop1_cnt] = Uint_Current1_Array[Uc_loop1_cnt];
-    //     }
-    //     /* Sắp xếp tu min-> max*/
-    //     for(Uc_loop1_cnt = 0; Uc_loop1_cnt<NUM_SAMPLE; Uc_loop1_cnt++)
-    //     {
-    //         for(Uc_loop2_cnt = Uc_loop1_cnt; Uc_loop2_cnt<NUM_SAMPLE; Uc_loop2_cnt++)
-    //         {
-    //             if(Uint_CurrentTmp_Array[Uc_loop1_cnt] > Uint_CurrentTmp_Array[Uc_loop2_cnt])
-    //             {
-    //                 Uint_Tmp = Uint_CurrentTmp_Array[Uc_loop1_cnt];
-    //                 Uint_CurrentTmp_Array[Uc_loop1_cnt] = Uint_CurrentTmp_Array[Uc_loop2_cnt];
-    //                 Uint_CurrentTmp_Array[Uc_loop2_cnt] = Uint_Tmp;
-    //             }
-    //         }
-    //     }
+    if(Bit_sample_full == 0)
+    {
+        Uint_dataLed1 = 0;
+        Uint_dataLed2 = 0;
+        Uint_dataLed3 = 0;
+    }
+    else
+    {
+        /* Chuyen sang bo nho dem*/
+        for(Uc_loop1_cnt = 0; Uc_loop1_cnt<NUM_SAMPLE; Uc_loop1_cnt++)
+        {
+            Uint_CurrentTmp_Array[Uc_loop1_cnt] = Uint_Current1_Array[Uc_loop1_cnt];
+        }
+        /* Sắp xếp tu min-> max*/
+        for(Uc_loop1_cnt = 0; Uc_loop1_cnt<NUM_SAMPLE; Uc_loop1_cnt++)
+        {
+            for(Uc_loop2_cnt = Uc_loop1_cnt; Uc_loop2_cnt<NUM_SAMPLE; Uc_loop2_cnt++)
+            {
+                if(Uint_CurrentTmp_Array[Uc_loop1_cnt] > Uint_CurrentTmp_Array[Uc_loop2_cnt])
+                {
+                    Uint_Tmp = Uint_CurrentTmp_Array[Uc_loop1_cnt];
+                    Uint_CurrentTmp_Array[Uc_loop1_cnt] = Uint_CurrentTmp_Array[Uc_loop2_cnt];
+                    Uint_CurrentTmp_Array[Uc_loop2_cnt] = Uint_Tmp;
+                }
+            }
+        }
 
-    //     Ul_Sum = 0;
-    //     for(Uc_loop1_cnt = NUM_FILTER;Uc_loop1_cnt<(NUM_SAMPLE - NUM_FILTER); Uc_loop1_cnt++)
-    //     {
-    //         Ul_Sum += Uint_CurrentTmp_Array[Uc_loop1_cnt];
-    //     }
-    //     Ul_Sum = Ul_Sum/(NUM_SAMPLE-2*NUM_FILTER);
-
-    //     Uint_dataLed1 = (unsigned int) Ul_Sum;
-    // }
+        Ul_Sum = 0;
+        for(Uc_loop1_cnt = NUM_FILTER;Uc_loop1_cnt<(NUM_SAMPLE - NUM_FILTER); Uc_loop1_cnt++)
+        {
+            Ul_Sum += Uint_CurrentTmp_Array[Uc_loop1_cnt];
+        }
+        Uint_dataLed1 = (unsigned int) Ul_Sum/100;
+    }
 }
 
 void main(void)
@@ -619,14 +618,25 @@ TWCR=(0<<TWEA) | (0<<TWSTA) | (0<<TWSTO) | (0<<TWEN) | (0<<TWIE);
 // Global enable interrupts
 #asm("sei")
 ADE7753_INIT();
- delay_ms(10000);
+// delay_ms(10000);
 // delay_ms(10000);
 // delay_ms(10000);
 //PHASE_1_ON;
 while (1)
     {
         delay_ms(200);
-        //ADE7753_READ(1,IRMS);
+        // temp[tmp_cnt++] = ADE7753_READ(1,IRMS);
+        // if(tmp_cnt > 30)    tmp_cnt = 0;
+        // CURRENT = 0;
+        // for(sample_cnt = 0; sample_cnt <30;sample_cnt++)
+        // {
+        //     CURRENT += temp[sample_cnt];
+        // }
+        // CURRENT /= sample_cnt;
         READ_AMP();
+        CURRENT = ADE7753_READ(2,IRMS);
+        Uint_dataLed2 = (unsigned int)CURRENT/100;
+        CURRENT = ADE7753_READ(3,IRMS);
+        Uint_dataLed3 = (unsigned int)CURRENT/100;
     }
 }
