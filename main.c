@@ -25,6 +25,7 @@ Data Stack size         : 256
 
 #include <mega8.h>
 #include <delay.h>
+#include <ADE7753.h>
 
 // Declare your global variables here
 #define DO_595_LATCH  PORTB.1
@@ -39,67 +40,9 @@ Data Stack size         : 256
 #define BUZZER_ON   BUZZER = 1
 #define BUZZER_OFF  BUZZER = 0
 
-#define CS_PHASE1_MCU   PORTC.4
-#define CS_PHASE2_MCU   PORTC.5
-#define CS_PHASE3_MCU   PORTC.3
-
-#define PHASE_1_ON  CS_PHASE1_MCU = 1
-#define PHASE_1_OFF CS_PHASE1_MCU = 0
-#define PHASE_2_ON  CS_PHASE2_MCU = 1
-#define PHASE_2_OFF CS_PHASE2_MCU = 0
-#define PHASE_3_ON  CS_PHASE3_MCU = 1
-#define PHASE_3_OFF CS_PHASE3_MCU = 0
-
-#define DOUT_MOSI_SPI_7753_MCU   PORTD.1
-#define DIN_MISO_SPI_7753_MCU    PIND.0
-#define DOUT_CLK_SPI_7753_MCU   PORTD.4
-
 #define NUM_SAMPLE  20
 #define NUM_FILTER  5
 
-//Dia chi cac thanh ghi SPI_ADE7753
-#define WAVEFORM        0x01,3    
-#define AENERGY         0x02,3
-#define RAENERGY        0x03,3
-#define LAENERGY		0x04,3
-#define VAENERGY		0x05,3
-#define RVAENERGY		0x06,3
-#define LVAENERGY		0x07,3
-#define LVARENERGY		0x08,3
-#define MODE			0x09,2
-#define IRQEN			0x0A,2
-#define STATUS			0x0B,2
-#define RSTSTATUS		0x0C,2
-#define CH1OS			0x0D,1
-#define CH2OS			0x0E,1
-#define GAIN			0x0F,1
-#define PHCAL			0x10,1
-#define APOS			0x11,2
-#define WGAIN			0x12,2
-#define WDIV			0x13,1
-#define CFNUM			0x14,2
-#define CFDEN			0x15,2
-#define IRMS			0x16,3
-#define VRMS			0x17,3
-#define IRMSOS			0x18,2
-#define VRMSOS			0x19,2
-#define VAGAIN			0x1A,2
-#define VADIV			0x1B,1
-#define LINECYC			0x1C,2
-#define ZXTOUT			0x1D,2
-#define SAGCYC			0x1E,1
-#define SAGLVL			0x1F,1
-#define IPKLVL			0x20,1
-#define VPKLVL			0x21,1
-#define IPEAK			0x22,3
-#define RSTIPEAK		0x23,3
-#define VPEAK			0x24,3
-#define RSTVPEAK		0x25,3
-#define TEMP			0x26,1
-#define PERIOD			0x27,2
-#define TMODE			0x3D,1
-#define CHKSUM			0x3E,1
-#define DIEREV			0x3F,1
 
 void    SEND_DATA_LED(unsigned char  data_first,unsigned char  data_second,unsigned char  data_third);
 void    SCAN_LED(unsigned char num_led,unsigned char    data);
@@ -112,9 +55,9 @@ unsigned int   Uint_dataLed3 = 0;
 
 bit Bit_sample_full =0;
 
-unsigned long Uint_Current1_Array[NUM_SAMPLE];
-unsigned long Uint_Current2_Array[NUM_SAMPLE];
-unsigned long Uint_Current3_Array[NUM_SAMPLE];
+unsigned int Uint_Current1_Array[NUM_SAMPLE];
+unsigned int Uint_Current2_Array[NUM_SAMPLE];
+unsigned int Uint_Current3_Array[NUM_SAMPLE];
 unsigned char   Uc_Current_Array_Cnt = 0;
 
 // Timer1 overflow interrupt service routine
@@ -333,147 +276,19 @@ void    SCAN_LED(unsigned char num_led,unsigned char    data)
     SEND_DATA_LED(byte1,byte2,byte3);
 }
 
-void    SPI_7753_SEND(unsigned char data)
-{
-    unsigned char cnt;
-    unsigned char   tmp = data;
-    for(cnt = 0;cnt < 8; cnt++)
-    {
-        if((tmp & 0x80) == 0x80)   DOUT_MOSI_SPI_7753_MCU = 1;
-        else DOUT_MOSI_SPI_7753_MCU = 0;
 
-        tmp <<= 1;
-        DOUT_CLK_SPI_7753_MCU = 1;
-        delay_us(40);
-        DOUT_CLK_SPI_7753_MCU = 0;
-        delay_us(40);
-    }
-}
-
-unsigned char    SPI_7753_RECEIVE(void)
-{
-    unsigned char cnt;
-    unsigned char data;
-    data = 0;
-    for(cnt = 0;cnt < 8; cnt++)
-    {
-        DOUT_CLK_SPI_7753_MCU = 1;
-        delay_us(40);
-        // DOUT_CLK_SPI_7753_MCU = 0;
-        // delay_us(40);
-        if(DIN_MISO_SPI_7753_MCU == 1)   data += 1;
-        data <<= 1;
-        DOUT_CLK_SPI_7753_MCU = 0;
-        delay_us(40);
-    }
-    return data;
-}
-
-void    ADE7753_WRITE(unsigned char IC_CS,unsigned char addr,unsigned char num_data,unsigned char data_1,unsigned char data_2,unsigned char data_3)
-{
-    unsigned char data[4];
-    unsigned char   i;
-    data[0] = data_1;
-    data[1] = data_2;
-    data[2] = data_3;
-
-    switch (IC_CS)
-    {
-        case 1:
-        {
-            PHASE_1_ON;
-            PHASE_2_OFF;
-            PHASE_3_OFF;
-            break;
-        }
-        case 2:
-        {
-            PHASE_1_OFF;
-            PHASE_2_ON;
-            PHASE_3_OFF;
-            break;
-        }
-        case 3:
-        {
-            PHASE_1_OFF;
-            PHASE_2_OFF;
-            PHASE_3_ON;
-            break;
-        }
-    }
-    addr |= 0x80;
-    SPI_7753_SEND(addr);
-    delay_us(20);
-    for(i=0;i<num_data;i++)    SPI_7753_SEND(data[i]);
-    PHASE_1_OFF;
-    PHASE_2_OFF;
-    PHASE_3_OFF;
-}
-unsigned long int    ADE7753_READ(unsigned char IC_CS,unsigned char addr,unsigned char num_data)
-{
-    unsigned char   i;
-    unsigned char   data[4];
-    unsigned long int res;
-    for(i=0;i<4;i++)    data[i] = 0;
-    switch (IC_CS)
-    {
-        case 1:
-        {
-            PHASE_1_ON;
-            PHASE_2_OFF;
-            PHASE_3_OFF;
-            break;
-        }
-        case 2:
-        {
-            PHASE_1_OFF;
-            PHASE_2_ON;
-            PHASE_3_OFF;
-            break;
-        }
-        case 3:
-        {
-            PHASE_1_OFF;
-            PHASE_2_OFF;
-            PHASE_3_ON;
-            break;
-        }
-    }
-    addr &= 0x3F;
-    SPI_7753_SEND(addr);
-    for(i=0;i<num_data;i++) data[i] = SPI_7753_RECEIVE();
-    PHASE_1_OFF;
-    PHASE_2_OFF;
-    PHASE_3_OFF;
-    res = 0;
-    for(i=0;i<num_data;i++)
-    {
-        res <<= 8;
-        res += data[i];
-    }
-    Uint_dataLed2 = data[0];
-
-    return (res/3600);
-}
-
-void    ADE7753_INIT(void)
-{
-    ADE7753_WRITE(1,MODE,0x00,0x00,0x00);
-    ADE7753_WRITE(1,SAGLVL,0X2a,0X00,0X00);
-    ADE7753_WRITE(1,SAGCYC,0X04,0X00,0X00);
-}
 
 
 void    READ_AMP(void)
 {
-    unsigned long Uint_Tmp;
-    unsigned long Uint_CurrentTmp_Array[NUM_SAMPLE];
+    unsigned int Uint_Tmp;
+    unsigned int Uint_CurrentTmp_Array[NUM_SAMPLE];
     unsigned char   Uc_loop1_cnt,Uc_loop2_cnt;
-    unsigned long   Ul_Sum;
+    unsigned int   Ul_Sum;
 
-    Uint_Current1_Array[Uc_Current_Array_Cnt] = ADE7753_READ(1,IRMS);;
-    //Uint_Current2_Array[Uc_Current_Array_Cnt] = (unsigned int)ADE7753_READ(2,IRMS)/100;
-    //Uint_Current3_Array[Uc_Current_Array_Cnt] = (unsigned int)ADE7753_READ(3,IRMS)/100;
+    Uint_Current1_Array[Uc_Current_Array_Cnt] = ADE7753_READ(1,IRMS);
+    Uint_Current2_Array[Uc_Current_Array_Cnt] = ADE7753_READ(2,IRMS);
+    Uint_Current3_Array[Uc_Current_Array_Cnt] = ADE7753_READ(3,IRMS);
     Uc_Current_Array_Cnt++;
     if(Uc_Current_Array_Cnt >= NUM_SAMPLE)
     {
@@ -481,42 +296,102 @@ void    READ_AMP(void)
         Uc_Current_Array_Cnt = 0;
     }
 
-    // if(Bit_sample_full == 0)
-    // {
-    //     Uint_dataLed1 = 0;
-    //     //Uint_dataLed2 = 0;
-    //    //Uint_dataLed3 = 0;
-    // }
-    // else
-    // {
-    //     /* Chuyen sang bo nho dem*/
-    //     for(Uc_loop1_cnt = 0; Uc_loop1_cnt<NUM_SAMPLE; Uc_loop1_cnt++)
-    //     {
-    //         Uint_CurrentTmp_Array[Uc_loop1_cnt] = Uint_Current1_Array[Uc_loop1_cnt];
-    //     }
-    //     /* Sắp xếp tu min-> max*/
-    //     for(Uc_loop1_cnt = 0; Uc_loop1_cnt<NUM_SAMPLE; Uc_loop1_cnt++)
-    //     {
-    //         for(Uc_loop2_cnt = Uc_loop1_cnt; Uc_loop2_cnt<NUM_SAMPLE; Uc_loop2_cnt++)
-    //         {
-    //             if(Uint_CurrentTmp_Array[Uc_loop1_cnt] > Uint_CurrentTmp_Array[Uc_loop2_cnt])
-    //             {
-    //                 Uint_Tmp = Uint_CurrentTmp_Array[Uc_loop1_cnt];
-    //                 Uint_CurrentTmp_Array[Uc_loop1_cnt] = Uint_CurrentTmp_Array[Uc_loop2_cnt];
-    //                 Uint_CurrentTmp_Array[Uc_loop2_cnt] = Uint_Tmp;
-    //             }
-    //         }
-    //     }
+    if(Bit_sample_full == 0)
+    {
+        Uint_dataLed1 = 0;
+        Uint_dataLed2 = 0;
+        Uint_dataLed3 = 0;
+    }
+    else
+    {
+        /* Xu ly du lieu L1 */
+        /* Chuyen sang bo nho dem*/
+        for(Uc_loop1_cnt = 0; Uc_loop1_cnt<NUM_SAMPLE; Uc_loop1_cnt++)
+        {
+            Uint_CurrentTmp_Array[Uc_loop1_cnt] = Uint_Current1_Array[Uc_loop1_cnt];
+        }
+        /* Sắp xếp tu min-> max*/
+        for(Uc_loop1_cnt = 0; Uc_loop1_cnt<NUM_SAMPLE; Uc_loop1_cnt++)
+        {
+            for(Uc_loop2_cnt = Uc_loop1_cnt; Uc_loop2_cnt<NUM_SAMPLE; Uc_loop2_cnt++)
+            {
+                if(Uint_CurrentTmp_Array[Uc_loop1_cnt] > Uint_CurrentTmp_Array[Uc_loop2_cnt])
+                {
+                    Uint_Tmp = Uint_CurrentTmp_Array[Uc_loop1_cnt];
+                    Uint_CurrentTmp_Array[Uc_loop1_cnt] = Uint_CurrentTmp_Array[Uc_loop2_cnt];
+                    Uint_CurrentTmp_Array[Uc_loop2_cnt] = Uint_Tmp;
+                }
+            }
+        }
+        /* Loc phan du lieu nhieu thap va cao */
+        Ul_Sum = 0;
+        for(Uc_loop1_cnt = NUM_FILTER;Uc_loop1_cnt<(NUM_SAMPLE - NUM_FILTER); Uc_loop1_cnt++)
+        {
+            Ul_Sum += Uint_CurrentTmp_Array[Uc_loop1_cnt];
+        }
+        Ul_Sum = Ul_Sum/(NUM_SAMPLE-2*NUM_FILTER);
+        /* Xuat du lieu len led */
+        Uint_dataLed1 = Ul_Sum;
 
-    //     Ul_Sum = 0;
-    //     for(Uc_loop1_cnt = NUM_FILTER;Uc_loop1_cnt<(NUM_SAMPLE - NUM_FILTER); Uc_loop1_cnt++)
-    //     {
-    //         Ul_Sum += Uint_CurrentTmp_Array[Uc_loop1_cnt];
-    //     }
-    //     Ul_Sum = Ul_Sum/(NUM_SAMPLE-2*NUM_FILTER);
+        /* Xu ly du lieu L2 */
+        /* Chuyen sang bo nho dem*/
+        for(Uc_loop1_cnt = 0; Uc_loop1_cnt<NUM_SAMPLE; Uc_loop1_cnt++)
+        {
+            Uint_CurrentTmp_Array[Uc_loop1_cnt] = Uint_Current2_Array[Uc_loop1_cnt];
+        }
+        /* Sắp xếp tu min-> max*/
+        for(Uc_loop1_cnt = 0; Uc_loop1_cnt<NUM_SAMPLE; Uc_loop1_cnt++)
+        {
+            for(Uc_loop2_cnt = Uc_loop1_cnt; Uc_loop2_cnt<NUM_SAMPLE; Uc_loop2_cnt++)
+            {
+                if(Uint_CurrentTmp_Array[Uc_loop1_cnt] > Uint_CurrentTmp_Array[Uc_loop2_cnt])
+                {
+                    Uint_Tmp = Uint_CurrentTmp_Array[Uc_loop1_cnt];
+                    Uint_CurrentTmp_Array[Uc_loop1_cnt] = Uint_CurrentTmp_Array[Uc_loop2_cnt];
+                    Uint_CurrentTmp_Array[Uc_loop2_cnt] = Uint_Tmp;
+                }
+            }
+        }
 
-    //     Uint_dataLed1 = (unsigned int) Ul_Sum;
-    // }
+        /* Loc phan du lieu nhieu thap va cao */
+        Ul_Sum = 0;
+        for(Uc_loop1_cnt = NUM_FILTER;Uc_loop1_cnt<(NUM_SAMPLE - NUM_FILTER); Uc_loop1_cnt++)
+        {
+            Ul_Sum += Uint_CurrentTmp_Array[Uc_loop1_cnt];
+        }
+        Ul_Sum = Ul_Sum/(NUM_SAMPLE-2*NUM_FILTER);
+        /* Xuat du lieu len led */
+        Uint_dataLed2 = Ul_Sum;
+
+        /* Xu ly du lieu L3 */
+        /* Chuyen sang bo nho dem*/
+        for(Uc_loop1_cnt = 0; Uc_loop1_cnt<NUM_SAMPLE; Uc_loop1_cnt++)
+        {
+            Uint_CurrentTmp_Array[Uc_loop1_cnt] = Uint_Current3_Array[Uc_loop1_cnt];
+        }
+        /* Sắp xếp tu min-> max*/
+        for(Uc_loop1_cnt = 0; Uc_loop1_cnt<NUM_SAMPLE; Uc_loop1_cnt++)
+        {
+            for(Uc_loop2_cnt = Uc_loop1_cnt; Uc_loop2_cnt<NUM_SAMPLE; Uc_loop2_cnt++)
+            {
+                if(Uint_CurrentTmp_Array[Uc_loop1_cnt] > Uint_CurrentTmp_Array[Uc_loop2_cnt])
+                {
+                    Uint_Tmp = Uint_CurrentTmp_Array[Uc_loop1_cnt];
+                    Uint_CurrentTmp_Array[Uc_loop1_cnt] = Uint_CurrentTmp_Array[Uc_loop2_cnt];
+                    Uint_CurrentTmp_Array[Uc_loop2_cnt] = Uint_Tmp;
+                }
+            }
+        }
+        /* Loc phan du lieu nhieu thap va cao */
+        Ul_Sum = 0;
+        for(Uc_loop1_cnt = NUM_FILTER;Uc_loop1_cnt<(NUM_SAMPLE - NUM_FILTER); Uc_loop1_cnt++)
+        {
+            Ul_Sum += Uint_CurrentTmp_Array[Uc_loop1_cnt];
+        }
+        Ul_Sum = Ul_Sum/(NUM_SAMPLE-2*NUM_FILTER);
+        /* Xuat du lieu len led */
+        Uint_dataLed3 = Ul_Sum;
+    }
 }
 
 void main(void)
@@ -619,14 +494,10 @@ TWCR=(0<<TWEA) | (0<<TWSTA) | (0<<TWSTO) | (0<<TWEN) | (0<<TWIE);
 // Global enable interrupts
 #asm("sei")
 ADE7753_INIT();
- delay_ms(10000);
-// delay_ms(10000);
-// delay_ms(10000);
-//PHASE_1_ON;
+delay_ms(10000);
 while (1)
     {
         delay_ms(200);
-        //ADE7753_READ(1,IRMS);
         READ_AMP();
     }
 }

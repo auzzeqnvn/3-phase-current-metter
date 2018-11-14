@@ -1,6 +1,9 @@
 RAM Allocation [bytes]
 Variable                                                                          Address   Size
 ------------------------------------------------------------------------------------------------
+Uint_Current1_Array                                                               0x0160      40
+Uint_Current2_Array                                                               0x0188      40
+Uint_Current3_Array                                                               0x01B0      40
 
 EEPROM Allocation [bytes]
 Variable                                                                          Address   Size
@@ -22,10 +25,10 @@ Function                                                                        
 timer1_ovf_isr                                                                    0x0004B    116
 SEND_DATA_LED                                                                     0x000BF     43
 SCAN_LED                                                                          0x000EA    148
-SPI_7753_SEND                                                                     0x0017E     19
-SPI_7753_RECEIVE                                                                  0x00191     16
-ADE7753_WRITE                                                                     0x001A1     52
-ADE7753_READ                                                                      0x001D5     93
-ADE7753_INIT                                                                      0x00232     22
-READ_AMP                                                                          0x00248     20
-main                                                                              0x0025C     60
+READ_AMP                                                                          0x0017E    172
+main                                                                              0x0022A     60
+SPI_7753_SEND                                                                     0x00266     19
+SPI_7753_RECEIVE                                                                  0x00279     16
+ADE7753_WRITE                                                                     0x00289     51
+ADE7753_READ                                                                      0x002BC     88
+ADE7753_INIT                                                                      0x00314     22
