@@ -497,7 +497,7 @@ ADE7753_INIT();
 delay_ms(10000);
 while (1)
     {
-        delay_ms(200);
+        delay_ms(300);
         READ_AMP();
     }
 }
