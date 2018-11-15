@@ -504,7 +504,7 @@ delay_ms(100);
 BUZZER_OFF;
 while (1)
     {
-        delay_ms(200);
+        delay_ms(300);
         READ_AMP();
     }
 }
