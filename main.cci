@@ -1,4 +1,4 @@
-VERSION:3 SOURCE_TIMESTAMP:4D6EB0F5
+VERSION:3 SOURCE_TIMESTAMP:4D6F5C56
 NODE:I LEVEL:0 LINE:26 "C:\cvavr\inc\mega8.h"
 NODE:I LEVEL:0 LINE:27 "C:\cvavr\inc\delay.h"
 NODE:I LEVEL:0 LINE:28 "ADE7753.h"
@@ -27,4 +27,4 @@ NODE:F LEVEL:0 LINE:91 "read_adc(unsigned char adc_input)"
 NODE:F LEVEL:0 LINE:104 "SEND_DATA_LED(unsigned char data_first,unsigned char data_second,unsigned char data_third)"
 NODE:F LEVEL:0 LINE:139 "SCAN_LED(unsigned char num_led,unsigned char data)"
 NODE:F LEVEL:0 LINE:282 "READ_AMP(void)"
-NODE:F LEVEL:0 LINE:397 "main(void)"
+NODE:F LEVEL:0 LINE:398 "main(void)"

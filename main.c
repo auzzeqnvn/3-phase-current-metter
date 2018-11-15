@@ -289,6 +289,7 @@ void    READ_AMP(void)
     Uint_Current1_Array[Uc_Current_Array_Cnt] = ADE7753_READ(1,IRMS);
     Uint_Current2_Array[Uc_Current_Array_Cnt] = ADE7753_READ(2,IRMS);
     Uint_Current3_Array[Uc_Current_Array_Cnt] = ADE7753_READ(3,IRMS);
+    //Uint_dataLed1 =  Uint_Current1_Array[Uc_Current_Array_Cnt];
     Uc_Current_Array_Cnt++;
     if(Uc_Current_Array_Cnt >= NUM_SAMPLE)
     {
@@ -493,8 +494,14 @@ TWCR=(0<<TWEA) | (0<<TWSTA) | (0<<TWSTO) | (0<<TWEN) | (0<<TWIE);
 
 // Global enable interrupts
 #asm("sei")
+Uint_dataLed1 = 8888;
+Uint_dataLed2 = 8888;
+Uint_dataLed3 = 8888;
 ADE7753_INIT();
 delay_ms(10000);
+BUZZER_ON;
+delay_ms(100);
+BUZZER_OFF;
 while (1)
     {
         delay_ms(200);

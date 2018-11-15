@@ -26,9 +26,9 @@ timer1_ovf_isr                                                                  
 SEND_DATA_LED                                                                     0x000BF     43
 SCAN_LED                                                                          0x000EA    148
 READ_AMP                                                                          0x0017E    172
-main                                                                              0x0022A     60
-SPI_7753_SEND                                                                     0x00266     19
-SPI_7753_RECEIVE                                                                  0x00279     16
-ADE7753_WRITE                                                                     0x00289     51
-ADE7753_READ                                                                      0x002BC     88
-ADE7753_INIT                                                                      0x00314     22
+main                                                                              0x0022A     70
+SPI_7753_SEND                                                                     0x00270     19
+SPI_7753_RECEIVE                                                                  0x00283     16
+ADE7753_WRITE                                                                     0x00293     51
+ADE7753_READ                                                                      0x002C6     88
+ADE7753_INIT                                                                      0x0031E     22
