@@ -1,9 +1,9 @@
 RAM Allocation [bytes]
 Variable                                                                          Address   Size
 ------------------------------------------------------------------------------------------------
-Uint_Current1_Array                                                               0x0160      40
-Uint_Current2_Array                                                               0x0188      40
-Uint_Current3_Array                                                               0x01B0      40
+AI10__Current_L1                                                                  0x0160      40
+AI10__Current_L2                                                                  0x0188      40
+AI10__Current_L3                                                                  0x01B0      40
 
 EEPROM Allocation [bytes]
 Variable                                                                          Address   Size
@@ -12,7 +12,7 @@ Variable                                                                        
 Register Allocation
 Variable                                                                          Register  Size
 ------------------------------------------------------------------------------------------------
-Uc_Ledcnt                                                                         R7           1
+Uc_Select_led                                                                     R7           1
 Uint_dataLed1                                                                     R8,R9        2
 Uint_dataLed2                                                                     R10,R11      2
 Uint_dataLed3                                                                     R12,R13      2
@@ -25,10 +25,8 @@ Function                                                                        
 timer1_ovf_isr                                                                    0x0004B    116
 SEND_DATA_LED                                                                     0x000BF     43
 SCAN_LED                                                                          0x000EA    148
-READ_AMP                                                                          0x0017E    172
-main                                                                              0x0022A     70
-SPI_7753_SEND                                                                     0x00270     19
-SPI_7753_RECEIVE                                                                  0x00283     16
-ADE7753_WRITE                                                                     0x00293     51
-ADE7753_READ                                                                      0x002C6     88
-ADE7753_INIT                                                                      0x0031E     22
+Read_Current                                                                      0x0017E    170
+main                                                                              0x00228     69
+Send_cmd_ADE7753                                                                  0x0026D     19
+Read_data_ADE7753                                                                 0x00280     16
+Read_ADE7753                                                                      0x00290     84

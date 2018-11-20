@@ -1,8 +1,7 @@
-VERSION:3 SOURCE_TIMESTAMP:4D6F5C1D
+VERSION:3 SOURCE_TIMESTAMP:4D74591A
 NODE:I LEVEL:0 LINE:1 "D:\Mydata\Work\Tan Phat\Bien doi nguon 3 phase\Firmware_2\3-phase-current-metter\ADE7753.h"
 NODE:I LEVEL:0 LINE:2 "C:\cvavr\inc\delay.h"
-NODE:F LEVEL:0 LINE:5 "SPI_7753_SEND(unsigned char data)"
-NODE:F LEVEL:0 LINE:22 "SPI_7753_RECEIVE(void)"
-NODE:F LEVEL:0 LINE:41 "ADE7753_WRITE(unsigned char IC_CS,unsigned char addr,unsigned char num_data,unsigned char data_1,unsigned char data_2,unsigned char data_3)"
-NODE:F LEVEL:0 LINE:81 "ADE7753_READ(unsigned char IC_CS,unsigned char addr,unsigned char num_data)"
-NODE:F LEVEL:0 LINE:126 "ADE7753_INIT(void)"
+NODE:F LEVEL:0 LINE:5 "Send_cmd_ADE7753(unsigned char data)"
+NODE:F LEVEL:0 LINE:22 "Read_data_ADE7753(void)"
+NODE:F LEVEL:0 LINE:39 "Write_ADE7753(unsigned char IC_CS,unsigned char addr,unsigned char num_data,unsigned char data_1,unsigned char data_2,unsigned char data_3)"
+NODE:F LEVEL:0 LINE:79 "Read_ADE7753(unsigned char IC_CS,unsigned char addr,unsigned char num_data)"

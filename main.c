@@ -40,24 +40,29 @@ Data Stack size         : 256
 #define BUZZER_ON   BUZZER = 1
 #define BUZZER_OFF  BUZZER = 0
 
+/* So luong mau lay de tinh toan */
 #define NUM_SAMPLE  20
+/* So luong noise loai bo */
 #define NUM_FILTER  5
 
 
 void    SEND_DATA_LED(unsigned char  data_first,unsigned char  data_second,unsigned char  data_third);
 void    SCAN_LED(unsigned char num_led,unsigned char    data);
 
-unsigned char   Uc_Ledcnt=1;
+unsigned char   Uc_Select_led=1;
 
+/* Cac gia tri hien thi tren cac led */
 unsigned int   Uint_dataLed1 = 0;
 unsigned int   Uint_dataLed2 = 0;
 unsigned int   Uint_dataLed3 = 0;
 
+/* Co bao da lay du luong mau de tinh toan */
 bit Bit_sample_full =0;
 
-unsigned int Uint_Current1_Array[NUM_SAMPLE];
-unsigned int Uint_Current2_Array[NUM_SAMPLE];
-unsigned int Uint_Current3_Array[NUM_SAMPLE];
+/* mang luu gia tri dong dien */
+unsigned int AI10__Current_L1[NUM_SAMPLE];
+unsigned int AI10__Current_L2[NUM_SAMPLE];
+unsigned int AI10__Current_L3[NUM_SAMPLE];
 unsigned char   Uc_Current_Array_Cnt = 0;
 
 // Timer1 overflow interrupt service routine
@@ -68,20 +73,20 @@ interrupt [TIM1_OVF] void timer1_ovf_isr(void)
     TCNT1H=0xAA00 >> 8;
     TCNT1L=0xAA00 & 0xff;
 // Place your code here
-    if(Uc_Ledcnt > 12) Uc_Ledcnt=1;
-    if(Uc_Ledcnt == 1)    data = Uint_dataLed1/1000;
-    else if(Uc_Ledcnt == 2)    data = Uint_dataLed1/100%10;
-    else if(Uc_Ledcnt == 3)    data = Uint_dataLed1/10%10;
-    else if(Uc_Ledcnt == 4)    data = Uint_dataLed1%10;
-    else if(Uc_Ledcnt == 5)    data = Uint_dataLed2/1000;
-    else if(Uc_Ledcnt == 6)    data = Uint_dataLed2/100%10;
-    else if(Uc_Ledcnt == 7)    data = Uint_dataLed2/10%10;
-    else if(Uc_Ledcnt == 8)    data = Uint_dataLed2%10;
-    else if(Uc_Ledcnt == 9)    data = Uint_dataLed3/1000;
-    else if(Uc_Ledcnt == 10)    data = Uint_dataLed3/100%10;
-    else if(Uc_Ledcnt == 11)    data = Uint_dataLed3/10%10;
-    else if(Uc_Ledcnt == 12)    data = Uint_dataLed3%10;
-    SCAN_LED(Uc_Ledcnt++,data);
+    if(Uc_Select_led > 12) Uc_Select_led=1;
+    if(Uc_Select_led == 1)    data = Uint_dataLed1/1000;
+    else if(Uc_Select_led == 2)    data = Uint_dataLed1/100%10;
+    else if(Uc_Select_led == 3)    data = Uint_dataLed1/10%10;
+    else if(Uc_Select_led == 4)    data = Uint_dataLed1%10;
+    else if(Uc_Select_led == 5)    data = Uint_dataLed2/1000;
+    else if(Uc_Select_led == 6)    data = Uint_dataLed2/100%10;
+    else if(Uc_Select_led == 7)    data = Uint_dataLed2/10%10;
+    else if(Uc_Select_led == 8)    data = Uint_dataLed2%10;
+    else if(Uc_Select_led == 9)    data = Uint_dataLed3/1000;
+    else if(Uc_Select_led == 10)    data = Uint_dataLed3/100%10;
+    else if(Uc_Select_led == 11)    data = Uint_dataLed3/10%10;
+    else if(Uc_Select_led == 12)    data = Uint_dataLed3%10;
+    SCAN_LED(Uc_Select_led++,data);
 }
 
 // Voltage Reference: AVCC pin
@@ -101,6 +106,11 @@ unsigned int read_adc(unsigned char adc_input)
     return ADCW;
 }
 
+/* 
+Gui data ra led 
+Gui lan luot data_first, data_second, data_third
+Khi gui het du lieu se tien hanh xuat du lieu
+*/
 void    SEND_DATA_LED(unsigned char  data_first,unsigned char  data_second,unsigned char  data_third)
 {
     unsigned char   i;
@@ -136,6 +146,11 @@ void    SEND_DATA_LED(unsigned char  data_first,unsigned char  data_second,unsig
     CTRL_595_OFF;
 }
 
+/* 
+Ham quet led
+num_led: Thu tu led
+data: Du lieu hien thi tren led.
+*/
 void    SCAN_LED(unsigned char num_led,unsigned char    data)
 {
     unsigned char   byte1,byte2,byte3;
@@ -259,7 +274,7 @@ void    SCAN_LED(unsigned char num_led,unsigned char    data)
         }
         case    7:
         {
-            byte1 = 0xA1;
+            byte1 |= 0xA1;
             break;
         }
         case    8:
@@ -278,18 +293,23 @@ void    SCAN_LED(unsigned char num_led,unsigned char    data)
 
 
 
-
-void    READ_AMP(void)
+/* 
+Doc gia tri dong dien L1, L2 ,L3
+Loai bo cac nhieu co bien do lon.
+Lay trung binh cac gia tri con lai.
+Cap nhat gia tri dong dien.
+*/
+void    Read_Current(void)
 {
     unsigned int Uint_Tmp;
     unsigned int Uint_CurrentTmp_Array[NUM_SAMPLE];
     unsigned char   Uc_loop1_cnt,Uc_loop2_cnt;
     unsigned int   Ul_Sum;
 
-    Uint_Current1_Array[Uc_Current_Array_Cnt] = ADE7753_READ(1,IRMS);
-    Uint_Current2_Array[Uc_Current_Array_Cnt] = ADE7753_READ(2,IRMS);
-    Uint_Current3_Array[Uc_Current_Array_Cnt] = ADE7753_READ(3,IRMS);
-    //Uint_dataLed1 =  Uint_Current1_Array[Uc_Current_Array_Cnt];
+    AI10__Current_L1[Uc_Current_Array_Cnt] = Read_ADE7753(1,IRMS);
+    AI10__Current_L2[Uc_Current_Array_Cnt] = Read_ADE7753(2,IRMS);
+    AI10__Current_L3[Uc_Current_Array_Cnt] = Read_ADE7753(3,IRMS);
+
     Uc_Current_Array_Cnt++;
     if(Uc_Current_Array_Cnt >= NUM_SAMPLE)
     {
@@ -309,7 +329,7 @@ void    READ_AMP(void)
         /* Chuyen sang bo nho dem*/
         for(Uc_loop1_cnt = 0; Uc_loop1_cnt<NUM_SAMPLE; Uc_loop1_cnt++)
         {
-            Uint_CurrentTmp_Array[Uc_loop1_cnt] = Uint_Current1_Array[Uc_loop1_cnt];
+            Uint_CurrentTmp_Array[Uc_loop1_cnt] = AI10__Current_L1[Uc_loop1_cnt];
         }
         /* Sắp xếp tu min-> max*/
         for(Uc_loop1_cnt = 0; Uc_loop1_cnt<NUM_SAMPLE; Uc_loop1_cnt++)
@@ -338,7 +358,7 @@ void    READ_AMP(void)
         /* Chuyen sang bo nho dem*/
         for(Uc_loop1_cnt = 0; Uc_loop1_cnt<NUM_SAMPLE; Uc_loop1_cnt++)
         {
-            Uint_CurrentTmp_Array[Uc_loop1_cnt] = Uint_Current2_Array[Uc_loop1_cnt];
+            Uint_CurrentTmp_Array[Uc_loop1_cnt] = AI10__Current_L2[Uc_loop1_cnt];
         }
         /* Sắp xếp tu min-> max*/
         for(Uc_loop1_cnt = 0; Uc_loop1_cnt<NUM_SAMPLE; Uc_loop1_cnt++)
@@ -368,7 +388,7 @@ void    READ_AMP(void)
         /* Chuyen sang bo nho dem*/
         for(Uc_loop1_cnt = 0; Uc_loop1_cnt<NUM_SAMPLE; Uc_loop1_cnt++)
         {
-            Uint_CurrentTmp_Array[Uc_loop1_cnt] = Uint_Current3_Array[Uc_loop1_cnt];
+            Uint_CurrentTmp_Array[Uc_loop1_cnt] = AI10__Current_L3[Uc_loop1_cnt];
         }
         /* Sắp xếp tu min-> max*/
         for(Uc_loop1_cnt = 0; Uc_loop1_cnt<NUM_SAMPLE; Uc_loop1_cnt++)
@@ -497,7 +517,6 @@ TWCR=(0<<TWEA) | (0<<TWSTA) | (0<<TWSTO) | (0<<TWEN) | (0<<TWIE);
 Uint_dataLed1 = 8888;
 Uint_dataLed2 = 8888;
 Uint_dataLed3 = 8888;
-ADE7753_INIT();
 delay_ms(10000);
 BUZZER_ON;
 delay_ms(100);
@@ -505,6 +524,6 @@ BUZZER_OFF;
 while (1)
     {
         delay_ms(200);
-        READ_AMP();
+        Read_Current();
     }
 }

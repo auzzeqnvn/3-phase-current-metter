@@ -2,7 +2,7 @@
 #include "delay.h"
 
 
-void    SPI_7753_SEND(unsigned char data)
+void    Send_cmd_ADE7753(unsigned char data)
 {
     unsigned char cnt;
     unsigned char   tmp = data;
@@ -19,7 +19,7 @@ void    SPI_7753_SEND(unsigned char data)
     }
 }
 
-unsigned char    SPI_7753_RECEIVE(void)
+unsigned char    Read_data_ADE7753(void)
 {
     unsigned char cnt;
     unsigned char data;
@@ -28,8 +28,6 @@ unsigned char    SPI_7753_RECEIVE(void)
     {
         DOUT_CLK_SPI_7753_MCU = 1;
         delay_us(40);
-        // DOUT_CLK_SPI_7753_MCU = 0;
-        // delay_us(40);
         if(DIN_MISO_SPI_7753_MCU == 1)   data += 1;
         data <<= 1;
         DOUT_CLK_SPI_7753_MCU = 0;
@@ -38,7 +36,7 @@ unsigned char    SPI_7753_RECEIVE(void)
     return data;
 }
 
-void    ADE7753_WRITE(unsigned char IC_CS,unsigned char addr,unsigned char num_data,unsigned char data_1,unsigned char data_2,unsigned char data_3)
+void    Write_ADE7753(unsigned char IC_CS,unsigned char addr,unsigned char num_data,unsigned char data_1,unsigned char data_2,unsigned char data_3)
 {
     unsigned char data[4];
     unsigned char   i;
@@ -71,14 +69,14 @@ void    ADE7753_WRITE(unsigned char IC_CS,unsigned char addr,unsigned char num_d
         }
     }
     addr |= 0x80;
-    SPI_7753_SEND(addr);
+    Send_cmd_ADE7753(addr);
     delay_us(20);
-    for(i=0;i<num_data;i++)    SPI_7753_SEND(data[i]);
+    for(i=0;i<num_data;i++)    Send_cmd_ADE7753(data[i]);
     PHASE_1_OFF;
     PHASE_2_OFF;
     PHASE_3_OFF;
 }
-unsigned int    ADE7753_READ(unsigned char IC_CS,unsigned char addr,unsigned char num_data)
+unsigned int    Read_ADE7753(unsigned char IC_CS,unsigned char addr,unsigned char num_data)
 {
     unsigned char   i;
     unsigned char   data[4];
@@ -109,8 +107,8 @@ unsigned int    ADE7753_READ(unsigned char IC_CS,unsigned char addr,unsigned cha
         }
     }
     addr &= 0x3F;
-    SPI_7753_SEND(addr);
-    for(i=0;i<num_data;i++) data[i] = SPI_7753_RECEIVE();
+    Send_cmd_ADE7753(addr);
+    for(i=0;i<num_data;i++) data[i] = Read_data_ADE7753();
     PHASE_1_OFF;
     PHASE_2_OFF;
     PHASE_3_OFF;
@@ -120,12 +118,5 @@ unsigned int    ADE7753_READ(unsigned char IC_CS,unsigned char addr,unsigned cha
         res <<= 8;
         res += data[i];
     }
-    return (res/3600);
-}
-
-void    ADE7753_INIT(void)
-{
-    ADE7753_WRITE(1,MODE,0x00,0x00,0x00);
-    ADE7753_WRITE(1,SAGLVL,0X2a,0X00,0X00);
-    ADE7753_WRITE(1,SAGCYC,0X04,0X00,0X00);
+    return (res/VRMS_scale);
 }

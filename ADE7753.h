@@ -1,20 +1,20 @@
 #include "mega8.h"
 
 
-#define CS_PHASE1_MCU   PORTC.4
-#define CS_PHASE2_MCU   PORTC.5
-#define CS_PHASE3_MCU   PORTC.3
+#define DOUT_CS_PHASE1_MCU   PORTC.4
+#define DOUT_CS_PHASE2_MCU   PORTC.5
+#define DOUT_CS_PHASE3_MCU   PORTC.3
 
 #define DOUT_MOSI_SPI_7753_MCU   PORTD.1
 #define DIN_MISO_SPI_7753_MCU    PIND.0
 #define DOUT_CLK_SPI_7753_MCU   PORTD.4
 
-#define PHASE_1_ON  CS_PHASE1_MCU = 1
-#define PHASE_1_OFF CS_PHASE1_MCU = 0
-#define PHASE_2_ON  CS_PHASE2_MCU = 1
-#define PHASE_2_OFF CS_PHASE2_MCU = 0
-#define PHASE_3_ON  CS_PHASE3_MCU = 1
-#define PHASE_3_OFF CS_PHASE3_MCU = 0
+#define PHASE_1_ON  DOUT_CS_PHASE1_MCU = 1
+#define PHASE_1_OFF DOUT_CS_PHASE1_MCU = 0
+#define PHASE_2_ON  DOUT_CS_PHASE2_MCU = 1
+#define PHASE_2_OFF DOUT_CS_PHASE2_MCU = 0
+#define PHASE_3_ON  DOUT_CS_PHASE3_MCU = 1
+#define PHASE_3_OFF DOUT_CS_PHASE3_MCU = 0
 
 //Dia chi cac thanh ghi SPI_ADE7753
 #define WAVEFORM        0x01,3    
@@ -60,9 +60,7 @@
 #define CHKSUM			0x3E,1
 #define DIEREV			0x3F,1
 
+#define VRMS_scale      3600
 
-void    SPI_7753_SEND(unsigned char data);
-unsigned char    SPI_7753_RECEIVE(void);
-void    ADE7753_WRITE(unsigned char IC_CS,unsigned char addr,unsigned char num_data,unsigned char data_1,unsigned char data_2,unsigned char data_3);
-unsigned int    ADE7753_READ(unsigned char IC_CS,unsigned char addr,unsigned char num_data);
-void    ADE7753_INIT(void);
+void    Write_ADE7753(unsigned char IC_CS,unsigned char addr,unsigned char num_data,unsigned char data_1,unsigned char data_2,unsigned char data_3);
+unsigned int    Read_ADE7753(unsigned char IC_CS,unsigned char addr,unsigned char num_data);
