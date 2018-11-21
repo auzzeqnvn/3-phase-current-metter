@@ -4,6 +4,9 @@ Variable                                                                        
 AI10__Current_L1                                                                  0x0160      40
 AI10__Current_L2                                                                  0x0188      40
 AI10__Current_L3                                                                  0x01B0      40
+AI10_Current_Set                                                                  0x01D8       2
+Uc_Buzzer_cnt                                                                     0x01DA       1
+Uc_Timer_cnt                                                                      0x01DB       1
 
 EEPROM Allocation [bytes]
 Variable                                                                          Address   Size
@@ -12,21 +15,25 @@ Variable                                                                        
 Register Allocation
 Variable                                                                          Register  Size
 ------------------------------------------------------------------------------------------------
+Bit_Warning_1                                                                     R2.0      1bit
+Bit_Warning_2                                                                     R2.1      1bit
+Bit_Warning_3                                                                     R2.2      1bit
 Uc_Select_led                                                                     R7           1
 Uint_dataLed1                                                                     R8,R9        2
 Uint_dataLed2                                                                     R10,R11      2
 Uint_dataLed3                                                                     R12,R13      2
-Bit_sample_full                                                                   R2.0      1bit
+Bit_sample_full                                                                   R2.3      1bit
 Uc_Current_Array_Cnt                                                              R6           1
 
 FLASH Allocation [words]
 Function                                                                          Address   Size
 ------------------------------------------------------------------------------------------------
-timer1_ovf_isr                                                                    0x0004B    116
-SEND_DATA_LED                                                                     0x000BF     43
-SCAN_LED                                                                          0x000EA    148
-Read_Current                                                                      0x0017E    170
-main                                                                              0x00228     69
-Send_cmd_ADE7753                                                                  0x0026D     19
-Read_data_ADE7753                                                                 0x00280     16
-Read_ADE7753                                                                      0x00290     84
+timer1_ovf_isr                                                                    0x0004B    229
+read_adc                                                                          0x00130     15
+SEND_DATA_LED                                                                     0x0013F     43
+SCAN_LED                                                                          0x0016A    156
+Read_Current                                                                      0x00206    205
+main                                                                              0x002D3     71
+Send_cmd_ADE7753                                                                  0x0031A     19
+Read_data_ADE7753                                                                 0x0032D     16
+Read_ADE7753                                                                      0x0033D     85

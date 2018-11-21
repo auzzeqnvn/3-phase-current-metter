@@ -40,10 +40,22 @@ Data Stack size         : 256
 #define BUZZER_ON   BUZZER = 1
 #define BUZZER_OFF  BUZZER = 0
 
+#define CURRENT_MAX_SET 15
+#define CURRENT_MIN_SET 8
+
+/* He so dieu chinh dien ap doc duoc cua tung pha */
+#define PHASE_1_SCALE   100
+#define PHASE_2_SCALE   160
+#define PHASE_3_SCALE   147
+
 /* So luong mau lay de tinh toan */
 #define NUM_SAMPLE  20
 /* So luong noise loai bo */
 #define NUM_FILTER  5
+
+bit Bit_Warning_1 = 0;
+bit Bit_Warning_2 = 0;
+bit Bit_Warning_3 = 0;
 
 
 void    SEND_DATA_LED(unsigned char  data_first,unsigned char  data_second,unsigned char  data_third);
@@ -65,6 +77,12 @@ unsigned int AI10__Current_L2[NUM_SAMPLE];
 unsigned int AI10__Current_L3[NUM_SAMPLE];
 unsigned char   Uc_Current_Array_Cnt = 0;
 
+unsigned int    AI10_Current_Set;
+
+unsigned char   Uc_Buzzer_cnt = 0;
+
+unsigned char   Uc_Timer_cnt = 0;
+
 // Timer1 overflow interrupt service routine
 interrupt [TIM1_OVF] void timer1_ovf_isr(void)
 {
@@ -73,6 +91,9 @@ interrupt [TIM1_OVF] void timer1_ovf_isr(void)
     TCNT1H=0xAA00 >> 8;
     TCNT1L=0xAA00 & 0xff;
 // Place your code here
+    Uc_Timer_cnt++;
+    if(Uc_Timer_cnt > 200)  Uc_Timer_cnt = 0;
+
     if(Uc_Select_led > 12) Uc_Select_led=1;
     if(Uc_Select_led == 1)    data = Uint_dataLed1/1000;
     else if(Uc_Select_led == 2)    data = Uint_dataLed1/100%10;
@@ -86,7 +107,38 @@ interrupt [TIM1_OVF] void timer1_ovf_isr(void)
     else if(Uc_Select_led == 10)    data = Uint_dataLed3/100%10;
     else if(Uc_Select_led == 11)    data = Uint_dataLed3/10%10;
     else if(Uc_Select_led == 12)    data = Uint_dataLed3%10;
-    SCAN_LED(Uc_Select_led++,data);
+
+    if(Bit_Warning_1 || Bit_Warning_2 || Bit_Warning_3)
+    {
+        if(Bit_Warning_1)
+        {
+            if((Uc_Select_led == 1 || Uc_Select_led == 2 || Uc_Select_led == 3 || Uc_Select_led == 4) && Uc_Timer_cnt < 100) SCAN_LED(Uc_Select_led,10);
+            else SCAN_LED(Uc_Select_led,data);
+        }
+
+        if(Bit_Warning_2)
+        {
+            if((Uc_Select_led == 5 || Uc_Select_led == 6 || Uc_Select_led == 7 || Uc_Select_led == 8) && Uc_Timer_cnt < 100) SCAN_LED(Uc_Select_led,10);
+            else SCAN_LED(Uc_Select_led,data);
+        }
+
+        if(Bit_Warning_3)
+        {
+            if((Uc_Select_led == 9 || Uc_Select_led == 10 || Uc_Select_led == 11 || Uc_Select_led == 12) && Uc_Timer_cnt < 100)  SCAN_LED(Uc_Select_led,10);
+            else SCAN_LED(Uc_Select_led,data);
+        }   
+    }
+    else    SCAN_LED(Uc_Select_led,data);
+    Uc_Select_led++;
+
+    if(Bit_Warning_1 || Bit_Warning_2 || Bit_Warning_3) 
+    {
+        Uc_Buzzer_cnt++;
+        if(Uc_Buzzer_cnt < 100) BUZZER_ON;
+        else    if(Uc_Buzzer_cnt < 200) BUZZER_OFF;
+        else Uc_Buzzer_cnt = 0;
+    }
+    else    BUZZER_OFF;
 }
 
 // Voltage Reference: AVCC pin
@@ -287,6 +339,13 @@ void    SCAN_LED(unsigned char num_led,unsigned char    data)
             byte1 |= 0xEB;
             break;
         }    
+        case    10:
+        {
+            byte3 = 0;
+            byte2 = 0;
+            byte1 = 0;
+            break;
+        }  
     }
     SEND_DATA_LED(byte1,byte2,byte3);
 }
@@ -305,10 +364,17 @@ void    Read_Current(void)
     unsigned int Uint_CurrentTmp_Array[NUM_SAMPLE];
     unsigned char   Uc_loop1_cnt,Uc_loop2_cnt;
     unsigned int   Ul_Sum;
+    unsigned long Ul_tmp;
 
-    AI10__Current_L1[Uc_Current_Array_Cnt] = Read_ADE7753(1,IRMS);
-    AI10__Current_L2[Uc_Current_Array_Cnt] = Read_ADE7753(2,IRMS);
-    AI10__Current_L3[Uc_Current_Array_Cnt] = Read_ADE7753(3,IRMS);
+    Ul_tmp = ((unsigned long) Read_ADE7753(1,IRMS) * PHASE_1_SCALE)/100;
+    AI10__Current_L1[Uc_Current_Array_Cnt] = (unsigned int) (Ul_tmp);
+    Ul_tmp = ((unsigned long) Read_ADE7753(2,IRMS) * PHASE_2_SCALE)/100;
+    AI10__Current_L2[Uc_Current_Array_Cnt] = (unsigned int) (Ul_tmp);
+    Ul_tmp = ((unsigned long) Read_ADE7753(3,IRMS) * PHASE_3_SCALE)/100;
+    AI10__Current_L3[Uc_Current_Array_Cnt] = (unsigned int) (Ul_tmp);
+
+    AI10_Current_Set = read_adc(0);
+    AI10_Current_Set = AI10_Current_Set*(CURRENT_MAX_SET-CURRENT_MIN_SET)*100/1024 + CURRENT_MIN_SET*100; 
 
     Uc_Current_Array_Cnt++;
     if(Uc_Current_Array_Cnt >= NUM_SAMPLE)
@@ -353,6 +419,8 @@ void    Read_Current(void)
         Ul_Sum = Ul_Sum/(NUM_SAMPLE-2*NUM_FILTER);
         /* Xuat du lieu len led */
         Uint_dataLed1 = Ul_Sum;
+        if(AI10_Current_Set < Uint_dataLed1)    Bit_Warning_1 =1;
+        else Bit_Warning_1 = 0;
 
         /* Xu ly du lieu L2 */
         /* Chuyen sang bo nho dem*/
@@ -383,6 +451,8 @@ void    Read_Current(void)
         Ul_Sum = Ul_Sum/(NUM_SAMPLE-2*NUM_FILTER);
         /* Xuat du lieu len led */
         Uint_dataLed2 = Ul_Sum;
+        if(AI10_Current_Set < Uint_dataLed2)    Bit_Warning_2 =1;
+        else Bit_Warning_2 = 0;
 
         /* Xu ly du lieu L3 */
         /* Chuyen sang bo nho dem*/
@@ -412,6 +482,8 @@ void    Read_Current(void)
         Ul_Sum = Ul_Sum/(NUM_SAMPLE-2*NUM_FILTER);
         /* Xuat du lieu len led */
         Uint_dataLed3 = Ul_Sum;
+        if(AI10_Current_Set < Uint_dataLed3)    Bit_Warning_3 =1;
+        else Bit_Warning_3 = 0;
     }
 }
 
@@ -517,13 +589,14 @@ TWCR=(0<<TWEA) | (0<<TWSTA) | (0<<TWSTO) | (0<<TWEN) | (0<<TWIE);
 Uint_dataLed1 = 8888;
 Uint_dataLed2 = 8888;
 Uint_dataLed3 = 8888;
-delay_ms(10000);
-BUZZER_ON;
+delay_ms(3000);
+Bit_Warning_1 =1;
 delay_ms(100);
-BUZZER_OFF;
+Bit_Warning_1 = 0;
 while (1)
     {
         delay_ms(200);
         Read_Current();
+        
     }
 }

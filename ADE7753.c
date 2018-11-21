@@ -118,5 +118,5 @@ unsigned int    Read_ADE7753(unsigned char IC_CS,unsigned char addr,unsigned cha
         res <<= 8;
         res += data[i];
     }
-    return (res/VRMS_scale);
+    return (res/IRMS_scale);
 }

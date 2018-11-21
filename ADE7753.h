@@ -60,7 +60,7 @@
 #define CHKSUM			0x3E,1
 #define DIEREV			0x3F,1
 
-#define VRMS_scale      3600
+#define IRMS_scale      3300
 
 void    Write_ADE7753(unsigned char IC_CS,unsigned char addr,unsigned char num_data,unsigned char data_1,unsigned char data_2,unsigned char data_3);
 unsigned int    Read_ADE7753(unsigned char IC_CS,unsigned char addr,unsigned char num_data);
