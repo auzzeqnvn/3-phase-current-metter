@@ -26,14 +26,8 @@ Data Stack size         : 256
 #include <mega8.h>
 #include <delay.h>
 #include <ADE7753.h>
+#include "led.h"
 
-// Declare your global variables here
-#define DO_595_LATCH  PORTB.1
-#define DO_595_MOSI    PORTB.3
-#define DO_595_SCK    PORTB.5
-
-#define CTRL_595_ON     DO_595_LATCH = 1
-#define CTRL_595_OFF    DO_595_LATCH = 0
 
 #define BUZZER  PORTC.2
 
@@ -42,11 +36,6 @@ Data Stack size         : 256
 
 #define CURRENT_MAX_SET 15
 #define CURRENT_MIN_SET 8
-
-/* He so dieu chinh dien ap doc duoc cua tung pha */
-#define PHASE_1_SCALE   100
-#define PHASE_2_SCALE   124
-#define PHASE_3_SCALE   116
 
 /* So luong mau lay de tinh toan */
 #define NUM_SAMPLE  5
@@ -58,15 +47,8 @@ bit Bit_Warning_2 = 0;
 bit Bit_Warning_3 = 0;
 
 
-void    SEND_DATA_LED(unsigned char  data_first,unsigned char  data_second,unsigned char  data_third);
-void    SCAN_LED(unsigned char num_led,unsigned char    data);
 
-unsigned char   Uc_Select_led=1;
 
-/* Cac gia tri hien thi tren cac led */
-unsigned int   Uint_dataLed1 = 0;
-unsigned int   Uint_dataLed2 = 0;
-unsigned int   Uint_dataLed3 = 0;
 
 /* Co bao da lay du luong mau de tinh toan */
 bit Bit_sample_full =0;
@@ -83,59 +65,18 @@ unsigned char   Uc_Buzzer_cnt = 0;
 
 unsigned char   Uc_Timer_cnt = 0;
 
-unsigned char   BCDLED[11]={0xF9,0x81,0xBA,0xAB,0xC3,0x6B,0x7B,0xA1,0xFB,0xEB,0};
-unsigned int    LED[12] = {0x0001,0x0002,0x0004,0x0008,0x0040,0x0020,0x0010,0x0080,0x4000,0x2000,0x1000,0x8000};
-
-
 
 // Timer1 overflow interrupt service routine
 interrupt [TIM1_OVF] void timer1_ovf_isr(void)
 {
-    unsigned char   data = 0;
 // Reinitialize Timer1 value
     TCNT1H=0xAA00 >> 8;
     TCNT1L=0xAA00 & 0xff;
 // Place your code here
-    Uc_Timer_cnt++;
-    if(Uc_Timer_cnt > 200)  Uc_Timer_cnt = 0;
+    // Uc_Timer_cnt++;
+    if(Uc_Timer_cnt < 200)  Uc_Timer_cnt++;
 
-    if(Uc_Select_led > 12) Uc_Select_led=1;
-    if(Uc_Select_led == 1)    data = Uint_dataLed1/1000;
-    else if(Uc_Select_led == 2)    data = Uint_dataLed1/100%10;
-    else if(Uc_Select_led == 3)    data = Uint_dataLed1/10%10;
-    else if(Uc_Select_led == 4)    data = Uint_dataLed1%10;
-    else if(Uc_Select_led == 5)    data = Uint_dataLed2/1000;
-    else if(Uc_Select_led == 6)    data = Uint_dataLed2/100%10;
-    else if(Uc_Select_led == 7)    data = Uint_dataLed2/10%10;
-    else if(Uc_Select_led == 8)    data = Uint_dataLed2%10;
-    else if(Uc_Select_led == 9)    data = Uint_dataLed3/1000;
-    else if(Uc_Select_led == 10)    data = Uint_dataLed3/100%10;
-    else if(Uc_Select_led == 11)    data = Uint_dataLed3/10%10;
-    else if(Uc_Select_led == 12)    data = Uint_dataLed3%10;
-
-    // if(Bit_Warning_1 || Bit_Warning_2 || Bit_Warning_3)
-    // {
-    //     if(Bit_Warning_1)
-    //     {
-    //         if((Uc_Select_led == 1 || Uc_Select_led == 2 || Uc_Select_led == 3 || Uc_Select_led == 4) && Uc_Timer_cnt < 100) SCAN_LED(Uc_Select_led,10);
-    //         else SCAN_LED(Uc_Select_led,data);
-    //     }
-
-    //     if(Bit_Warning_2)
-    //     {
-    //         if((Uc_Select_led == 5 || Uc_Select_led == 6 || Uc_Select_led == 7 || Uc_Select_led == 8) && Uc_Timer_cnt < 100) SCAN_LED(Uc_Select_led,10);
-    //         else SCAN_LED(Uc_Select_led,data);
-    //     }
-
-    //     if(Bit_Warning_3)
-    //     {
-    //         if((Uc_Select_led == 9 || Uc_Select_led == 10 || Uc_Select_led == 11 || Uc_Select_led == 12) && Uc_Timer_cnt < 100)  SCAN_LED(Uc_Select_led,10);
-    //         else SCAN_LED(Uc_Select_led,data);
-    //     }   
-    // }
-    // else    
-    SCAN_LED(Uc_Select_led,data);
-    Uc_Select_led++;
+    LED();
 
     if(Bit_Warning_1 || Bit_Warning_2 || Bit_Warning_3) 
     {
@@ -163,84 +104,6 @@ unsigned int read_adc(unsigned char adc_input)
     ADCSRA|=(1<<ADIF);
     return ADCW;
 }
-
-/* 
-Gui data ra led 
-Gui lan luot data_first, data_second, data_third
-Khi gui het du lieu se tien hanh xuat du lieu
-*/
-void    SEND_DATA_LED(unsigned char  data_first,unsigned char  data_second,unsigned char  data_third)
-{
-    unsigned char   i;
-    unsigned char   data;
-    data = data_first;
-    for(i=0;i<8;i++)
-    {
-        if((data & 0x80) == 0x80)    DO_595_MOSI = 1;
-        else    DO_595_MOSI = 0;
-        data <<= 1;
-        DO_595_SCK = 1;
-        delay_us(3);
-        DO_595_SCK = 0;
-        delay_us(1);
-    }
-     DO_595_MOSI = 1;
-    data = data_second;
-    for(i=0;i<8;i++)
-    {
-        if((data & 0x80) == 0x80)    DO_595_MOSI = 1;
-        else    DO_595_MOSI = 0;
-        data <<= 1;
-        DO_595_SCK = 1;
-        delay_us(3);
-        DO_595_SCK = 0;
-        delay_us(1);
-    }
-     DO_595_MOSI = 1;
-    data = data_third;
-    for(i=0;i<8;i++)
-    {
-        if((data & 0x80) == 0x80)    DO_595_MOSI = 1;
-        else    DO_595_MOSI = 0;
-        data <<= 1;
-        DO_595_SCK = 1;
-        delay_us(3);
-        DO_595_SCK = 0;
-        delay_us(1);
-    }
-     DO_595_MOSI = 1;
-    CTRL_595_ON;
-    delay_us(15);
-    CTRL_595_OFF;
-}
-
-/* 
-Ham quet led
-num_led: Thu tu led
-data: Du lieu hien thi tren led.
-*/
-void    SCAN_LED(unsigned char num_led,unsigned char    data)
-{
-    unsigned char   byte1,byte2,byte3;
-    byte1 = 0;
-    byte2 = 0;
-    byte3 = 0;
-   
-    byte2 = (LED[num_led-1] >> 8) & 0xff;
-    byte3 = LED[num_led-1] & 0xff;
-    if(num_led == 2 || num_led == 6 || num_led == 10)   byte1 = 0x04;
-    byte1 |= BCDLED[data];
-    if(data == 10)  
-    {
-        byte3 = 0;
-        byte2 = 0;
-        byte1 = 0;
-    }
-    SEND_DATA_LED(byte1,byte2,byte3);
-}
-
-
-
 /* 
 Doc gia tri dong dien L1, L2 ,L3
 Loai bo cac nhieu co bien do lon.
@@ -255,17 +118,12 @@ void    Read_Current(void)
     unsigned int   Ul_Sum;
     unsigned long Ul_tmp;
 
-    // Ul_tmp = ((unsigned long) Read_ADE7753(1,IRMS) * PHASE_1_SCALE)/100/IRMS_scale;
     Ul_tmp = ((unsigned long) Read_ADE7753(1,IRMS)/800);
-    // if(Ul_tmp < 450 && Ul_tmp > 100)    Ul_tmp = Ul_tmp*1.1814146648 + Ul_tmp*Ul_tmp*0.0000095023 - Ul_tmp*Ul_tmp*Ul_tmp*0.0000000917;
-    // else if(Ul_tmp >500 && Ul_tmp < 550)    Ul_tmp = Ul_tmp -(Ul_tmp-500)*15/50;
-    // else if(Ul_tmp > 750)    Ul_tmp = Ul_tmp* 0.9553164373 - Ul_tmp*Ul_tmp*0.0000099864 + Ul_tmp*Ul_tmp*Ul_tmp*0.0000000213;
-    //Ul_tmp = Ul_tmp + Ul_tmp*0.08;
     AI10__Current_L1[Uc_Current_Array_Cnt] = (unsigned int) (Ul_tmp);
-    // Ul_tmp = ((unsigned long) Read_ADE7753(2,IRMS) * PHASE_2_SCALE)/100/IRMS_scale;
+
     Ul_tmp = ((unsigned long) Read_ADE7753(2,IRMS)/1105);
     AI10__Current_L2[Uc_Current_Array_Cnt] = (unsigned int) (Ul_tmp);
-    //Ul_tmp = ((unsigned long) Read_ADE7753(3,IRMS) * PHASE_3_SCALE)/100/IRMS_scale;
+
     Ul_tmp = ((unsigned long) Read_ADE7753(3,IRMS)/577);
     AI10__Current_L3[Uc_Current_Array_Cnt] = (unsigned int) (Ul_tmp);
 
@@ -313,9 +171,9 @@ void    Read_Current(void)
             Ul_Sum += Uint_CurrentTmp_Array[Uc_loop1_cnt];
         }
         Ul_Sum = Ul_Sum/(NUM_SAMPLE-2*NUM_FILTER);
-        //if(Ul_Sum > 500)    Ul_Sum = Ul_Sum*1.263550988 + Ul_Sum*Ul_Sum*0.0000695432 - Ul_Sum*Ul_Sum*Ul_Sum*0.000000193;
         /* Xuat du lieu len led */
-        Uint_dataLed1 = Ul_Sum;
+        if(Uc_Timer_cnt == 200) Uint_dataLed1 = Ul_Sum;
+
         if(AI10_Current_Set < Uint_dataLed1)    Bit_Warning_1 =1;
         else Bit_Warning_1 = 0;
 
@@ -347,7 +205,7 @@ void    Read_Current(void)
         }
         Ul_Sum = Ul_Sum/(NUM_SAMPLE-2*NUM_FILTER);
         /* Xuat du lieu len led */
-        Uint_dataLed2 = Ul_Sum;
+        if(Uc_Timer_cnt == 200) Uint_dataLed2 = Ul_Sum;
         if(AI10_Current_Set < Uint_dataLed2)    Bit_Warning_2 =1;
         else Bit_Warning_2 = 0;
 
@@ -378,7 +236,11 @@ void    Read_Current(void)
         }
         Ul_Sum = Ul_Sum/(NUM_SAMPLE-2*NUM_FILTER);
         /* Xuat du lieu len led */
-        Uint_dataLed3 = Ul_Sum;
+        if(Uc_Timer_cnt == 200) 
+        {
+            Uint_dataLed3 = Ul_Sum;
+            Uc_Timer_cnt = 0;
+        }
         if(AI10_Current_Set < Uint_dataLed3)    Bit_Warning_3 =1;
         else Bit_Warning_3 = 0;
     }
@@ -483,16 +345,15 @@ TWCR=(0<<TWEA) | (0<<TWSTA) | (0<<TWSTO) | (0<<TWEN) | (0<<TWIE);
 
 // Global enable interrupts
 #asm("sei")
-Uint_dataLed1 = 1234;
-Uint_dataLed2 = 2345;
-Uint_dataLed3 = 8818;
+Uint_dataLed1 = 8888;
+Uint_dataLed2 = 8888;
+Uint_dataLed3 = 8888;
 ADE_7753_init();
 Bit_Warning_1 =1;
 delay_ms(100);
 Bit_Warning_1 = 0;
 while (1)
     {
-        Read_Current();       
-        delay_ms(500); 
+        Read_Current();  
     }
 }

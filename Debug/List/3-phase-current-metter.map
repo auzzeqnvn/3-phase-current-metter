@@ -1,14 +1,14 @@
 RAM Allocation [bytes]
 Variable                                                                          Address   Size
 ------------------------------------------------------------------------------------------------
-AI10__Current_L1                                                                  0x0160      10
-AI10__Current_L2                                                                  0x016A      10
-AI10__Current_L3                                                                  0x0174      10
-AI10_Current_Set                                                                  0x017E       2
-Uc_Buzzer_cnt                                                                     0x0180       1
-Uc_Timer_cnt                                                                      0x0181       1
-BCDLED                                                                            0x0182      11
-LED                                                                               0x018D      24
+Uint_dataLed1                                                                     0x0160       2
+Uint_dataLed2                                                                     0x0162       2
+Uint_dataLed3                                                                     0x0164       2
+AI10__Current_L1                                                                  0x0166      10
+AI10__Current_L2                                                                  0x0170      10
+AI10__Current_L3                                                                  0x017A      10
+BCDLED                                                                            0x0184      11
+LED_SELECT                                                                        0x018F      24
 
 EEPROM Allocation [bytes]
 Variable                                                                          Address   Size
@@ -20,24 +20,25 @@ Variable                                                                        
 Bit_Warning_1                                                                     R2.0      1bit
 Bit_Warning_2                                                                     R2.1      1bit
 Bit_Warning_3                                                                     R2.2      1bit
-Uc_Select_led                                                                     R7           1
-Uint_dataLed1                                                                     R8,R9        2
-Uint_dataLed2                                                                     R10,R11      2
-Uint_dataLed3                                                                     R12,R13      2
 Bit_sample_full                                                                   R2.3      1bit
-Uc_Current_Array_Cnt                                                              R6           1
+Uc_Current_Array_Cnt                                                              R7           1
+AI10_Current_Set                                                                  R8,R9        2
+Uc_Buzzer_cnt                                                                     R6           1
+Uc_Timer_cnt                                                                      R11          1
+Uc_Select_led                                                                     R10          1
 
 FLASH Allocation [words]
 Function                                                                          Address   Size
 ------------------------------------------------------------------------------------------------
-timer1_ovf_isr                                                                    0x00062    155
-read_adc                                                                          0x000FD     15
-SEND_DATA_LED                                                                     0x0010C     49
-SCAN_LED                                                                          0x0013D     40
-Read_Current                                                                      0x00165    207
-main                                                                              0x00234     71
-Send_cmd_ADE7753                                                                  0x0027B     18
-Read_data_ADE7753                                                                 0x0028D     13
-Write_ADE7753                                                                     0x0029A     55
-Read_ADE7753                                                                      0x002D1     94
-ADE_7753_init                                                                     0x0032F     49
+timer1_ovf_isr                                                                    0x00061     56
+read_adc                                                                          0x00099     15
+Read_Current                                                                      0x000A8    236
+main                                                                              0x00194     75
+Send_cmd_ADE7753                                                                  0x001DF     20
+Read_data_ADE7753                                                                 0x001F3     13
+Write_ADE7753                                                                     0x00200     55
+Read_ADE7753                                                                      0x00237     94
+ADE_7753_init                                                                     0x00295     43
+LED                                                                               0x002C0     84
+SEND_DATA_LED                                                                     0x00314     43
+SCAN_LED                                                                          0x0033F     40
