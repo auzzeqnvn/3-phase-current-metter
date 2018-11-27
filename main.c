@@ -45,13 +45,13 @@ Data Stack size         : 256
 
 /* He so dieu chinh dien ap doc duoc cua tung pha */
 #define PHASE_1_SCALE   100
-#define PHASE_2_SCALE   160
-#define PHASE_3_SCALE   147
+#define PHASE_2_SCALE   124
+#define PHASE_3_SCALE   116
 
 /* So luong mau lay de tinh toan */
-#define NUM_SAMPLE  20
+#define NUM_SAMPLE  5
 /* So luong noise loai bo */
-#define NUM_FILTER  5
+#define NUM_FILTER  1
 
 bit Bit_Warning_1 = 0;
 bit Bit_Warning_2 = 0;
@@ -83,6 +83,11 @@ unsigned char   Uc_Buzzer_cnt = 0;
 
 unsigned char   Uc_Timer_cnt = 0;
 
+unsigned char   BCDLED[11]={0xF9,0x81,0xBA,0xAB,0xC3,0x6B,0x7B,0xA1,0xFB,0xEB,0};
+unsigned int    LED[12] = {0x0001,0x0002,0x0004,0x0008,0x0040,0x0020,0x0010,0x0080,0x4000,0x2000,0x1000,0x8000};
+
+
+
 // Timer1 overflow interrupt service routine
 interrupt [TIM1_OVF] void timer1_ovf_isr(void)
 {
@@ -108,27 +113,28 @@ interrupt [TIM1_OVF] void timer1_ovf_isr(void)
     else if(Uc_Select_led == 11)    data = Uint_dataLed3/10%10;
     else if(Uc_Select_led == 12)    data = Uint_dataLed3%10;
 
-    if(Bit_Warning_1 || Bit_Warning_2 || Bit_Warning_3)
-    {
-        if(Bit_Warning_1)
-        {
-            if((Uc_Select_led == 1 || Uc_Select_led == 2 || Uc_Select_led == 3 || Uc_Select_led == 4) && Uc_Timer_cnt < 100) SCAN_LED(Uc_Select_led,10);
-            else SCAN_LED(Uc_Select_led,data);
-        }
+    // if(Bit_Warning_1 || Bit_Warning_2 || Bit_Warning_3)
+    // {
+    //     if(Bit_Warning_1)
+    //     {
+    //         if((Uc_Select_led == 1 || Uc_Select_led == 2 || Uc_Select_led == 3 || Uc_Select_led == 4) && Uc_Timer_cnt < 100) SCAN_LED(Uc_Select_led,10);
+    //         else SCAN_LED(Uc_Select_led,data);
+    //     }
 
-        if(Bit_Warning_2)
-        {
-            if((Uc_Select_led == 5 || Uc_Select_led == 6 || Uc_Select_led == 7 || Uc_Select_led == 8) && Uc_Timer_cnt < 100) SCAN_LED(Uc_Select_led,10);
-            else SCAN_LED(Uc_Select_led,data);
-        }
+    //     if(Bit_Warning_2)
+    //     {
+    //         if((Uc_Select_led == 5 || Uc_Select_led == 6 || Uc_Select_led == 7 || Uc_Select_led == 8) && Uc_Timer_cnt < 100) SCAN_LED(Uc_Select_led,10);
+    //         else SCAN_LED(Uc_Select_led,data);
+    //     }
 
-        if(Bit_Warning_3)
-        {
-            if((Uc_Select_led == 9 || Uc_Select_led == 10 || Uc_Select_led == 11 || Uc_Select_led == 12) && Uc_Timer_cnt < 100)  SCAN_LED(Uc_Select_led,10);
-            else SCAN_LED(Uc_Select_led,data);
-        }   
-    }
-    else    SCAN_LED(Uc_Select_led,data);
+    //     if(Bit_Warning_3)
+    //     {
+    //         if((Uc_Select_led == 9 || Uc_Select_led == 10 || Uc_Select_led == 11 || Uc_Select_led == 12) && Uc_Timer_cnt < 100)  SCAN_LED(Uc_Select_led,10);
+    //         else SCAN_LED(Uc_Select_led,data);
+    //     }   
+    // }
+    // else    
+    SCAN_LED(Uc_Select_led,data);
     Uc_Select_led++;
 
     if(Bit_Warning_1 || Bit_Warning_2 || Bit_Warning_3) 
@@ -174,8 +180,11 @@ void    SEND_DATA_LED(unsigned char  data_first,unsigned char  data_second,unsig
         else    DO_595_MOSI = 0;
         data <<= 1;
         DO_595_SCK = 1;
+        delay_us(3);
         DO_595_SCK = 0;
+        delay_us(1);
     }
+     DO_595_MOSI = 1;
     data = data_second;
     for(i=0;i<8;i++)
     {
@@ -183,8 +192,11 @@ void    SEND_DATA_LED(unsigned char  data_first,unsigned char  data_second,unsig
         else    DO_595_MOSI = 0;
         data <<= 1;
         DO_595_SCK = 1;
+        delay_us(3);
         DO_595_SCK = 0;
+        delay_us(1);
     }
+     DO_595_MOSI = 1;
     data = data_third;
     for(i=0;i<8;i++)
     {
@@ -192,9 +204,13 @@ void    SEND_DATA_LED(unsigned char  data_first,unsigned char  data_second,unsig
         else    DO_595_MOSI = 0;
         data <<= 1;
         DO_595_SCK = 1;
+        delay_us(3);
         DO_595_SCK = 0;
+        delay_us(1);
     }
+     DO_595_MOSI = 1;
     CTRL_595_ON;
+    delay_us(15);
     CTRL_595_OFF;
 }
 
@@ -209,143 +225,16 @@ void    SCAN_LED(unsigned char num_led,unsigned char    data)
     byte1 = 0;
     byte2 = 0;
     byte3 = 0;
-    switch(num_led)
+   
+    byte2 = (LED[num_led-1] >> 8) & 0xff;
+    byte3 = LED[num_led-1] & 0xff;
+    if(num_led == 2 || num_led == 6 || num_led == 10)   byte1 = 0x04;
+    byte1 |= BCDLED[data];
+    if(data == 10)  
     {
-        case    1:
-        {
-            byte3 = 0x01;
-            byte2 = 0x00;
-            break;
-        }
-        case    2:
-        {
-            byte3 = 0x02;
-            byte2 = 0x00;
-            byte1 = 0x04;
-            break;
-        }
-        case    3:
-        {
-            byte3 = 0x04;
-            byte2 = 0x00;
-            break;
-        }
-        case    4:
-        {
-            byte3 = 0x08;
-            byte2 = 0x00;
-            break;
-        }
-        case    5:
-        {
-            byte3 = 0x40;
-            byte2 = 0x00;
-            break;
-        }
-        case    6:
-        {
-            byte3 = 0x20;
-            byte2 = 0x00;
-            byte1 = 0x04;
-            break;
-        }
-        case    7:
-        {
-            byte3 = 0x10;
-            byte2 = 0x00;
-            break;
-        }
-        case    8:
-        {
-            byte3 = 0x80;
-            byte2 = 0x00;
-            break;
-        }
-        case    9:
-        {
-            byte3 = 0x00;
-            byte2 = 0x40;
-            break;
-        }
-        case    10:
-        {
-            byte3 = 0x00;
-            byte2 = 0x20;
-            byte1 = 0x04;
-            break;
-        }
-        case    11:
-        {
-            byte3 = 0x00;
-            byte2 = 0x10;
-            break;
-        }
-        case    12:
-        {
-            byte3 = 0x00;
-            byte2 = 0x80;
-            break;
-        }
-    }
-    switch(data)
-    {
-        case    0:
-        {
-            byte1 |= 0xF9;
-            break;
-        }
-        case    1:
-        {
-            byte1 |= 0x81;
-            break;
-        }
-        case    2:
-        {
-            byte1 |= 0xBA;
-            break;
-        }
-        case    3:
-        {
-            byte1 |= 0xAB;
-            break;
-        }
-        case    4:
-        {
-            byte1 |= 0xC3;
-            break;
-        }
-        case    5:
-        {
-            byte1 |= 0x6B;
-            break;
-        }
-        case    6:
-        {
-            byte1 |= 0x7B;
-            break;
-        }
-        case    7:
-        {
-            byte1 |= 0xA1;
-            break;
-        }
-        case    8:
-        {
-            byte1 |= 0xFB;
-            break;
-        }
-        case    9:
-        {
-            byte1 |= 0xEB;
-            break;
-        }    
-        case    10:
-        {
-            byte3 = 0;
-            byte2 = 0;
-            byte1 = 0;
-            break;
-        }  
+        byte3 = 0;
+        byte2 = 0;
+        byte1 = 0;
     }
     SEND_DATA_LED(byte1,byte2,byte3);
 }
@@ -366,11 +255,18 @@ void    Read_Current(void)
     unsigned int   Ul_Sum;
     unsigned long Ul_tmp;
 
-    Ul_tmp = ((unsigned long) Read_ADE7753(1,IRMS) * PHASE_1_SCALE)/100;
+    // Ul_tmp = ((unsigned long) Read_ADE7753(1,IRMS) * PHASE_1_SCALE)/100/IRMS_scale;
+    Ul_tmp = ((unsigned long) Read_ADE7753(1,IRMS)/800);
+    // if(Ul_tmp < 450 && Ul_tmp > 100)    Ul_tmp = Ul_tmp*1.1814146648 + Ul_tmp*Ul_tmp*0.0000095023 - Ul_tmp*Ul_tmp*Ul_tmp*0.0000000917;
+    // else if(Ul_tmp >500 && Ul_tmp < 550)    Ul_tmp = Ul_tmp -(Ul_tmp-500)*15/50;
+    // else if(Ul_tmp > 750)    Ul_tmp = Ul_tmp* 0.9553164373 - Ul_tmp*Ul_tmp*0.0000099864 + Ul_tmp*Ul_tmp*Ul_tmp*0.0000000213;
+    //Ul_tmp = Ul_tmp + Ul_tmp*0.08;
     AI10__Current_L1[Uc_Current_Array_Cnt] = (unsigned int) (Ul_tmp);
-    Ul_tmp = ((unsigned long) Read_ADE7753(2,IRMS) * PHASE_2_SCALE)/100;
+    // Ul_tmp = ((unsigned long) Read_ADE7753(2,IRMS) * PHASE_2_SCALE)/100/IRMS_scale;
+    Ul_tmp = ((unsigned long) Read_ADE7753(2,IRMS)/1105);
     AI10__Current_L2[Uc_Current_Array_Cnt] = (unsigned int) (Ul_tmp);
-    Ul_tmp = ((unsigned long) Read_ADE7753(3,IRMS) * PHASE_3_SCALE)/100;
+    //Ul_tmp = ((unsigned long) Read_ADE7753(3,IRMS) * PHASE_3_SCALE)/100/IRMS_scale;
+    Ul_tmp = ((unsigned long) Read_ADE7753(3,IRMS)/577);
     AI10__Current_L3[Uc_Current_Array_Cnt] = (unsigned int) (Ul_tmp);
 
     AI10_Current_Set = read_adc(0);
@@ -417,6 +313,7 @@ void    Read_Current(void)
             Ul_Sum += Uint_CurrentTmp_Array[Uc_loop1_cnt];
         }
         Ul_Sum = Ul_Sum/(NUM_SAMPLE-2*NUM_FILTER);
+        //if(Ul_Sum > 500)    Ul_Sum = Ul_Sum*1.263550988 + Ul_Sum*Ul_Sum*0.0000695432 - Ul_Sum*Ul_Sum*Ul_Sum*0.000000193;
         /* Xuat du lieu len led */
         Uint_dataLed1 = Ul_Sum;
         if(AI10_Current_Set < Uint_dataLed1)    Bit_Warning_1 =1;
@@ -495,7 +392,7 @@ void main(void)
 // Function: Bit7=In Bit6=In Bit5=In Bit4=Out Bit3=Out Bit2=In Bit1=Out Bit0=In 
 DDRB=(0<<DDB7) | (0<<DDB6) | (1<<DDB5) | (1<<DDB4) | (1<<DDB3) | (0<<DDB2) | (1<<DDB1) | (0<<DDB0);
 // State: Bit7=T Bit6=T Bit5=T Bit4=0 Bit3=0 Bit2=T Bit1=0 Bit0=T 
-PORTB=(0<<PORTB7) | (0<<PORTB6) | (0<<PORTB5) | (0<<PORTB4) | (0<<PORTB3) | (0<<PORTB2) | (0<<PORTB1) | (0<<PORTB0);
+PORTB=(0<<PORTB7) | (0<<PORTB6) | (1<<PORTB5) | (0<<PORTB4) | (1<<PORTB3) | (0<<PORTB2) | (1<<PORTB1) | (0<<PORTB0);
 
 // Port C initialization
 // Function: Bit6=In Bit5=Out Bit4=Out Bit3=Out Bit2=Out Bit1=In Bit0=In 
@@ -586,17 +483,16 @@ TWCR=(0<<TWEA) | (0<<TWSTA) | (0<<TWSTO) | (0<<TWEN) | (0<<TWIE);
 
 // Global enable interrupts
 #asm("sei")
-Uint_dataLed1 = 8888;
-Uint_dataLed2 = 8888;
-Uint_dataLed3 = 8888;
-delay_ms(3000);
+Uint_dataLed1 = 1234;
+Uint_dataLed2 = 2345;
+Uint_dataLed3 = 8818;
+ADE_7753_init();
 Bit_Warning_1 =1;
 delay_ms(100);
 Bit_Warning_1 = 0;
 while (1)
     {
-        delay_ms(200);
-        Read_Current();
-        
+        Read_Current();       
+        delay_ms(500); 
     }
 }

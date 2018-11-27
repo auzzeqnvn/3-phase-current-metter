@@ -26,12 +26,13 @@ unsigned char    Read_data_ADE7753(void)
     data = 0;
     for(cnt = 0;cnt < 8; cnt++)
     {
+        data <<= 1;
         DOUT_CLK_SPI_7753_MCU = 1;
         delay_us(40);
         if(DIN_MISO_SPI_7753_MCU == 1)   data += 1;
-        data <<= 1;
         DOUT_CLK_SPI_7753_MCU = 0;
         delay_us(40);
+        
     }
     return data;
 }
@@ -76,7 +77,7 @@ void    Write_ADE7753(unsigned char IC_CS,unsigned char addr,unsigned char num_d
     PHASE_2_OFF;
     PHASE_3_OFF;
 }
-unsigned int    Read_ADE7753(unsigned char IC_CS,unsigned char addr,unsigned char num_data)
+unsigned long    Read_ADE7753(unsigned char IC_CS,unsigned char addr,unsigned char num_data)
 {
     unsigned char   i;
     unsigned char   data[4];
@@ -106,6 +107,7 @@ unsigned int    Read_ADE7753(unsigned char IC_CS,unsigned char addr,unsigned cha
             break;
         }
     }
+    delay_ms(10);
     addr &= 0x3F;
     Send_cmd_ADE7753(addr);
     for(i=0;i<num_data;i++) data[i] = Read_data_ADE7753();
@@ -118,5 +120,25 @@ unsigned int    Read_ADE7753(unsigned char IC_CS,unsigned char addr,unsigned cha
         res <<= 8;
         res += data[i];
     }
-    return (res/IRMS_scale);
+    return (res);
+}
+
+
+void    ADE_7753_init(void)
+{
+    unsigned int   reg = 0;
+    Write_ADE7753(1,MODE,0x00,0x00,0x00);
+    delay_ms(500);
+    reg = 0; 
+    reg |= (1<<SWRST);
+    Write_ADE7753(1,MODE,(reg>>8)&0xFF,reg & 0xff,0x00);
+    delay_ms(500);
+    reg = Read_ADE7753(1,MODE);
+    delay_ms(500);
+    reg = Read_ADE7753(1,MODE);
+    reg |= (1<<DISHPF) | (1<<WAVSEL0) | (1<<WAVSEL1);
+    // Write_ADE7753(1,MODE,(reg>>8)&0xFF,reg & 0xff,0x00);
+    delay_ms(500);
+    Write_ADE7753(1,SAGLVL,0X2a,0X00,0X00);
+    Write_ADE7753(1,SAGCYC,0XFF,0X00,0X00);
 }
