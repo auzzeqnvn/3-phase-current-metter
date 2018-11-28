@@ -67,17 +67,18 @@ unsigned char   Uc_Timer_cnt = 0;
 
 
 // Timer1 overflow interrupt service routine
+/* Timer 1.9ms */
 interrupt [TIM1_OVF] void timer1_ovf_isr(void)
 {
 // Reinitialize Timer1 value
     TCNT1H=0xAA00 >> 8;
     TCNT1L=0xAA00 & 0xff;
 // Place your code here
-    // Uc_Timer_cnt++;
     if(Uc_Timer_cnt < 200)  Uc_Timer_cnt++;
 
-    LED();
+    SCAN_LED();
 
+    /* Bat coi loa buzzer khi co canh bao */
     if(Bit_Warning_1 || Bit_Warning_2 || Bit_Warning_3) 
     {
         Uc_Buzzer_cnt++;
@@ -106,9 +107,10 @@ unsigned int read_adc(unsigned char adc_input)
 }
 /* 
 Doc gia tri dong dien L1, L2 ,L3
-Loai bo cac nhieu co bien do lon.
+Loai bo cac noise co bien do lon.
 Lay trung binh cac gia tri con lai.
-Cap nhat gia tri dong dien.
+Cap nhat gia tri dong dien hien thi len led
+Chu ki cap nhat gia tri hien thi la 200*timer
 */
 void    Read_Current(void)
 {
@@ -118,15 +120,22 @@ void    Read_Current(void)
     unsigned int   Ul_Sum;
     unsigned long Ul_tmp;
 
-    Ul_tmp = ((unsigned long) Read_ADE7753(1,IRMS)/800);
+    /* Doc gia tri dong dien 1 */
+    Ul_tmp = ((unsigned long) Read_ADE7753(1,IRMS)/728);//800
     AI10__Current_L1[Uc_Current_Array_Cnt] = (unsigned int) (Ul_tmp);
+    delay_ms(50);
 
-    Ul_tmp = ((unsigned long) Read_ADE7753(2,IRMS)/1105);
+     /* Doc gia tri dong dien 2 */
+    Ul_tmp = ((unsigned long) Read_ADE7753(2,IRMS)/1082);//1105
     AI10__Current_L2[Uc_Current_Array_Cnt] = (unsigned int) (Ul_tmp);
+    delay_ms(50);
 
-    Ul_tmp = ((unsigned long) Read_ADE7753(3,IRMS)/577);
+     /* Doc gia tri dong dien 3 */
+    Ul_tmp = ((unsigned long) Read_ADE7753(3,IRMS)/565);//577
     AI10__Current_L3[Uc_Current_Array_Cnt] = (unsigned int) (Ul_tmp);
+    delay_ms(50);
 
+     /* Doc gia tri dong dien cai dat */
     AI10_Current_Set = read_adc(0);
     AI10_Current_Set = AI10_Current_Set*(CURRENT_MAX_SET-CURRENT_MIN_SET)*100/1024 + CURRENT_MIN_SET*100; 
 
@@ -173,7 +182,7 @@ void    Read_Current(void)
         Ul_Sum = Ul_Sum/(NUM_SAMPLE-2*NUM_FILTER);
         /* Xuat du lieu len led */
         if(Uc_Timer_cnt == 200) Uint_dataLed1 = Ul_Sum;
-
+        /* Bat canh bao khi dong dien lon hon dong cai dat */
         if(AI10_Current_Set < Uint_dataLed1)    Bit_Warning_1 =1;
         else Bit_Warning_1 = 0;
 
@@ -206,6 +215,7 @@ void    Read_Current(void)
         Ul_Sum = Ul_Sum/(NUM_SAMPLE-2*NUM_FILTER);
         /* Xuat du lieu len led */
         if(Uc_Timer_cnt == 200) Uint_dataLed2 = Ul_Sum;
+        /* Bat canh bao khi dong dien lon hon dong cai dat */
         if(AI10_Current_Set < Uint_dataLed2)    Bit_Warning_2 =1;
         else Bit_Warning_2 = 0;
 
@@ -241,6 +251,7 @@ void    Read_Current(void)
             Uint_dataLed3 = Ul_Sum;
             Uc_Timer_cnt = 0;
         }
+        /* Bat canh bao khi dong dien lon hon dong cai dat */
         if(AI10_Current_Set < Uint_dataLed3)    Bit_Warning_3 =1;
         else Bit_Warning_3 = 0;
     }

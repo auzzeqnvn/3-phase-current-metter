@@ -13,5 +13,4 @@ extern unsigned int   Uint_dataLed2;
 extern unsigned int   Uint_dataLed3;
 
 void    SEND_DATA_LED(unsigned char  data_first,unsigned char  data_second,unsigned char  data_third);
-void    SCAN_LED(unsigned char num_led,unsigned char    data);
-void    LED(void);
+void    SCAN_LED(void);
