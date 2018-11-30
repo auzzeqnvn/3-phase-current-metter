@@ -37,6 +37,11 @@ Data Stack size         : 256
 #define CURRENT_MAX_SET 15
 #define CURRENT_MIN_SET 8
 
+/* He so su dung de calibration */
+#define CURRENT_L1_RATIO    728
+#define CURRENT_L2_RATIO    1082
+#define CURRENT_L3_RATIO    565
+
 /* So luong mau lay de tinh toan */
 #define NUM_SAMPLE  5
 /* So luong noise loai bo */
@@ -121,17 +126,17 @@ void    Read_Current(void)
     unsigned long Ul_tmp;
 
     /* Doc gia tri dong dien 1 */
-    Ul_tmp = ((unsigned long) Read_ADE7753(1,IRMS)/728);//800
+    Ul_tmp = ((unsigned long) Read_ADE7753(1,IRMS)/CURRENT_L1_RATIO);//800
     AI10__Current_L1[Uc_Current_Array_Cnt] = (unsigned int) (Ul_tmp);
     delay_ms(50);
 
      /* Doc gia tri dong dien 2 */
-    Ul_tmp = ((unsigned long) Read_ADE7753(2,IRMS)/1082);//1105
+    Ul_tmp = ((unsigned long) Read_ADE7753(2,IRMS)/CURRENT_L2_RATIO);//1105
     AI10__Current_L2[Uc_Current_Array_Cnt] = (unsigned int) (Ul_tmp);
     delay_ms(50);
 
      /* Doc gia tri dong dien 3 */
-    Ul_tmp = ((unsigned long) Read_ADE7753(3,IRMS)/565);//577
+    Ul_tmp = ((unsigned long) Read_ADE7753(3,IRMS)/CURRENT_L3_RATIO);//577
     AI10__Current_L3[Uc_Current_Array_Cnt] = (unsigned int) (Ul_tmp);
     delay_ms(50);
 
